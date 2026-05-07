@@ -1,10 +1,10 @@
-"""BAG Individuele Bevragingen client (Kadaster).
+"""BAG client via PDOK OGC API (open, geen key vereist).
 
-API-key is gratis aan te vragen:
-  https://www.pdok.nl/restful-api/-/article/bag-individuele-bevragingen
-  (verwerking duurt 1-2 werkdagen)
+Endpoint: https://api.pdok.nl/kadaster/bag/ogc/v2/
+Documentatie: https://api.pdok.nl/kadaster/bag/ogc/v2/
 
-Zonder key werkt deze client niet. Stel BAG_API_KEY in .env in.
+Pand-data (bouwjaar, gebruiksdoel) zit op de pand-collectie.
+Oppervlakte zit op verblijfsobjecten (VBO's), gelinkt via pand.
 """
 from __future__ import annotations
 
@@ -14,11 +14,9 @@ from dataclasses import dataclass, field
 
 import httpx
 
-from ..config import settings
-
 log = logging.getLogger(__name__)
 
-_BASE = "https://api.bag.kadaster.nl/lvbag/individuelebevragingen/v2"
+_BASE = "https://api.pdok.nl/kadaster/bag/ogc/v2/collections"
 
 
 @dataclass
@@ -26,10 +24,10 @@ class BagPand:
     pand_id: str
     bouwjaar: int | None
     status: str | None
-    geometrie_wkt: str | None      # WKT van de pandvlak-geometrie
     gebruiksdoelen: list[str] = field(default_factory=list)
     oppervlakte_min: int | None = None
     oppervlakte_max: int | None = None
+    geometrie_geojson: dict | None = None   # GeoJSON polygon voor PostGIS
 
 
 @dataclass
@@ -42,25 +40,78 @@ class BagVbo:
     rd_y: float | None
 
 
-def _headers() -> dict[str, str]:
-    return {
-        "X-Api-Key": settings.bag_api_key,
-        "Accept": "application/hal+json",
-        "Accept-Crs": "epsg:28992",
-    }
+def get_pand_from_vbo(vbo_id: str) -> BagPand | None:
+    """
+    Zoek pandgegevens op via een VBO-id (adresseerbaarobject_id van Locatieserver).
+    Workflow: VBO ophalen → pand.href URL → pand ophalen.
+    """
+    url = f"{_BASE}/verblijfsobject/items"
+    try:
+        with httpx.Client(timeout=15) as client:
+            resp = client.get(url, params={"identificatie": vbo_id, "f": "json"})
+            resp.raise_for_status()
+    except httpx.HTTPError as exc:
+        log.warning("BAG VBO lookup mislukt voor %s: %s", vbo_id, exc)
+        return None
+
+    features = resp.json().get("features", [])
+    if not features:
+        return None
+
+    props = features[0].get("properties", {})
+    pand_hrefs = props.get("pand.href", [])
+    if not pand_hrefs:
+        return None
+
+    # Haal het eerste pand op via de UUID-URL
+    pand_uuid_url = pand_hrefs[0]
+    try:
+        with httpx.Client(timeout=15) as client:
+            resp = client.get(pand_uuid_url, params={"f": "json"})
+            resp.raise_for_status()
+    except httpx.HTTPError as exc:
+        log.warning("BAG pand UUID-lookup mislukt: %s", exc)
+        return None
+
+    pand_data = resp.json()
+    pand_props = pand_data.get("properties", {})
+    pand_id = pand_props.get("identificatie")
+    if not pand_id:
+        return None
+
+    # Verzamel alle VBO-oppervlaktes voor min/max berekening
+    all_opps = [props.get("oppervlakte")] if props.get("oppervlakte") else []
+    gebruiksdoel_raw = pand_props.get("gebruiksdoel", "")
+    gebruiksdoelen = (
+        [g.strip() for g in gebruiksdoel_raw.split(",") if g.strip()]
+        if isinstance(gebruiksdoel_raw, str) else gebruiksdoel_raw or []
+    )
+
+    pand = BagPand(
+        pand_id=pand_id,
+        bouwjaar=int(pand_props["bouwjaar"]) if pand_props.get("bouwjaar") else None,
+        status=pand_props.get("status"),
+        gebruiksdoelen=gebruiksdoelen,
+        geometrie_geojson=pand_data.get("geometry"),
+        oppervlakte_min=min(all_opps) if all_opps else None,
+        oppervlakte_max=max(all_opps) if all_opps else None,
+    )
+    return pand
 
 
 def get_pand(pand_id: str, *, retries: int = 3) -> BagPand | None:
-    """Haal pandgegevens op voor het gegeven BAG pand_id."""
-    if not settings.bag_api_key:
-        log.warning("BAG_API_KEY niet ingesteld — sla BAG-lookup over voor %s", pand_id)
-        return None
+    """Haal pandgegevens op voor het gegeven BAG pand_id (identificatie)."""
+    url = f"{_BASE}/pand/items"
+    params = {
+        "identificatie": pand_id,
+        "f": "json",
+        "crs": "http://www.opengis.net/def/crs/EPSG/0/28992",  # RD New
+    }
 
-    url = f"{_BASE}/panden/{pand_id}"
     for attempt in range(retries):
         try:
-            with httpx.Client(timeout=10) as client:
-                resp = client.get(url, headers=_headers())
+            with httpx.Client(timeout=15) as client:
+                resp = client.get(url, params=params)
         except httpx.HTTPError as exc:
             log.warning("BAG pand request mislukt (poging %d): %s", attempt + 1, exc)
             if attempt < retries - 1:
@@ -68,11 +119,6 @@ def get_pand(pand_id: str, *, retries: int = 3) -> BagPand | None:
             continue
 
         if resp.status_code == 404:
-            log.debug("BAG pand niet gevonden: %s", pand_id)
-            return None
-
-        if resp.status_code == 401:
-            log.error("BAG API-key ongeldig of verlopen")
             return None
 
         try:
@@ -83,88 +129,94 @@ def get_pand(pand_id: str, *, retries: int = 3) -> BagPand | None:
                 time.sleep(2 ** attempt)
             continue
 
-        return _parse_pand(resp.json())
+        features = resp.json().get("features", [])
+        if not features:
+            log.debug("BAG: geen features voor pand_id %s", pand_id)
+            return None
+
+        return _parse_pand_feature(features[0], pand_id)
 
     return None
 
 
 def get_vbos_for_pand(pand_id: str) -> list[BagVbo]:
     """Haal verblijfsobjecten op voor een pand."""
-    if not settings.bag_api_key:
-        return []
-
-    url = f"{_BASE}/verblijfsobjecten"
-    params = {"pandIdentificatie": pand_id, "pageSize": 100}
+    url = f"{_BASE}/verblijfsobject/items"
+    params = {
+        "pandIdentificatie": pand_id,
+        "f": "json",
+        "limit": 100,
+        "crs": "http://www.opengis.net/def/crs/EPSG/0/28992",
+    }
 
     try:
-        with httpx.Client(timeout=10) as client:
-            resp = client.get(url, headers=_headers(), params=params)
+        with httpx.Client(timeout=15) as client:
+            resp = client.get(url, params=params)
             resp.raise_for_status()
     except httpx.HTTPError as exc:
         log.warning("BAG VBO request mislukt voor pand %s: %s", pand_id, exc)
         return []
 
     results = []
-    for item in resp.json().get("_embedded", {}).get("verblijfsobjecten", []):
-        vbo = _parse_vbo(item, pand_id)
+    for feature in resp.json().get("features", []):
+        vbo = _parse_vbo_feature(feature, pand_id)
         if vbo:
             results.append(vbo)
     return results
 
 
-def _parse_pand(data: dict) -> BagPand | None:
+def _parse_pand_feature(feature: dict, pand_id: str) -> BagPand | None:
     try:
-        pand = data["pand"]
-        pand_id = pand["identificatie"]
-        bouwjaar = pand.get("oorspronkelijkBouwjaar")
-        status = pand.get("status")
+        props = feature.get("properties", {})
+        geom = feature.get("geometry")
 
-        # Geometrie als WKT (Kadaster retourneert GeoJSON, we slaan WKT op)
-        geom = pand.get("geometrie", {})
-        geom_wkt = _geojson_to_wkt_placeholder(geom)
+        bouwjaar_raw = props.get("bouwjaar") or props.get("oorspronkelijkBouwjaar")
+        gebruiksdoel = props.get("gebruiksdoel") or props.get("gebruiksfunctie")
+
+        # gebruiksdoel kan string of list zijn
+        if isinstance(gebruiksdoel, str):
+            gebruiksdoelen = [gebruiksdoel]
+        elif isinstance(gebruiksdoel, list):
+            gebruiksdoelen = gebruiksdoel
+        else:
+            gebruiksdoelen = []
 
         return BagPand(
             pand_id=pand_id,
-            bouwjaar=int(bouwjaar) if bouwjaar else None,
-            status=status,
-            geometrie_wkt=geom_wkt,
+            bouwjaar=int(bouwjaar_raw) if bouwjaar_raw else None,
+            status=props.get("status"),
+            gebruiksdoelen=gebruiksdoelen,
+            geometrie_geojson=geom,
         )
     except (KeyError, TypeError, ValueError) as exc:
         log.warning("Kon BAG panddata niet parsen: %s", exc)
         return None
 
 
-def _parse_vbo(item: dict, pand_id: str) -> BagVbo | None:
+def _parse_vbo_feature(feature: dict, pand_id: str) -> BagVbo | None:
     try:
-        vbo_id = item["identificatie"]
-        gebruiksdoel = (item.get("gebruiksdoelen") or [None])[0]
-        oppervlakte = item.get("oppervlakte")
+        props = feature.get("properties", {})
+        vbo_id = props.get("identificatie") or feature.get("id", "")
 
-        geom = item.get("geometrie", {})
-        coords = geom.get("punt", {}).get("coordinates", [])
-        rd_x = coords[0] if len(coords) >= 2 else None
-        rd_y = coords[1] if len(coords) >= 2 else None
+        gebruiksdoel = props.get("gebruiksdoel") or props.get("gebruiksfunctie")
+        if isinstance(gebruiksdoel, list):
+            gebruiksdoel = gebruiksdoel[0] if gebruiksdoel else None
+
+        oppervlakte = props.get("oppervlakte")
+
+        geom = feature.get("geometry", {})
+        coords = geom.get("coordinates", []) if geom else []
+        rd_x = float(coords[0]) if len(coords) >= 2 else None
+        rd_y = float(coords[1]) if len(coords) >= 2 else None
 
         return BagVbo(
-            vbo_id=vbo_id,
+            vbo_id=str(vbo_id),
             pand_id=pand_id,
             gebruiksdoel=gebruiksdoel,
             oppervlakte=int(oppervlakte) if oppervlakte else None,
-            rd_x=float(rd_x) if rd_x else None,
-            rd_y=float(rd_y) if rd_y else None,
+            rd_x=rd_x,
+            rd_y=rd_y,
         )
     except (KeyError, TypeError, ValueError) as exc:
         log.warning("Kon BAG VBO niet parsen: %s", exc)
         return None
-
-
-def _geojson_to_wkt_placeholder(geom: dict) -> str | None:
-    """
-    Tijdelijke WKT-conversie voor vlakgeometrie.
-    PostGIS kan GeoJSON direct importeren via ST_GeomFromGeoJSON —
-    we slaan de GeoJSON op als string en laten de pipeline converteren.
-    """
-    import json
-    if not geom:
-        return None
-    return json.dumps(geom)

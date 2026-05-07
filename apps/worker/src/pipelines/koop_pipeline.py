@@ -19,7 +19,7 @@ from supabase import create_client, Client
 from ..config import settings
 from ..sources.koop import build_query, fetch_page, parse_response
 from ..sources.pdok import geocode_address
-from ..sources.bag import get_pand, get_vbos_for_pand
+from ..sources.bag import get_pand, get_pand_from_vbo, get_vbos_for_pand
 from ..sources.eponline import get_label_for_address
 from ..scoring.scores import calculate_total_score, estimate_materiaalvolumes
 
@@ -130,23 +130,24 @@ def _enrich_and_score(supabase: Client, melding: dict, stats: dict) -> None:
     if geo.rd_x and geo.rd_y:
         geometry_wkt = f"SRID=28992;POINT({geo.rd_x} {geo.rd_y})"
 
-    supabase.table("sloopmeldingen_raw").update({
-        "geocode_status": "ok",
-        "geocode_attempts": melding.get("geocode_attempts", 0) + 1,
-        "bag_pand_id": geo.pand_id,
-    }).eq("id", melding_id).execute()
-
-    # 4. BAG
+    # 4. BAG: VBO-id → pand
     bag_pand = None
-    if geo.pand_id:
-        bag_pand = get_pand(geo.pand_id)
+    if geo.vbo_id:
+        bag_pand = get_pand_from_vbo(geo.vbo_id)
         if bag_pand:
             stats["bag_enriched"] += 1
             _upsert_bag_pand(supabase, bag_pand)
-
-            vbos = get_vbos_for_pand(geo.pand_id)
+            vbos = get_vbos_for_pand(bag_pand.pand_id)
             for vbo in vbos:
                 _upsert_bag_vbo(supabase, vbo)
+
+    pand_id = bag_pand.pand_id if bag_pand else None
+
+    supabase.table("sloopmeldingen_raw").update({
+        "geocode_status": "ok",
+        "geocode_attempts": melding.get("geocode_attempts", 0) + 1,
+        "bag_pand_id": pand_id,
+    }).eq("id", melding_id).execute()
 
     # 5. EP-Online
     ep_label = None
@@ -156,7 +157,7 @@ def _enrich_and_score(supabase: Client, melding: dict, stats: dict) -> None:
             ep_label = get_label_for_address(geo.postcode, huisnummer)
             if ep_label:
                 stats["ep_enriched"] += 1
-                _upsert_ep_label(supabase, ep_label, geo.pand_id)
+                _upsert_ep_label(supabase, ep_label, pand_id)
 
     # 6. Lead aanmaken / updaten
     bouwjaar = bag_pand.bouwjaar if bag_pand else None
@@ -171,7 +172,7 @@ def _enrich_and_score(supabase: Client, melding: dict, stats: dict) -> None:
 
     lead_row = {
         "sloopmelding_id": melding_id,
-        "pand_id": geo.pand_id,
+        "pand_id": pand_id,
         "address_full": geo.address_full,
         "postcode": geo.postcode,
         "gemeente": geo.gemeente or melding.get("gemeente", ""),

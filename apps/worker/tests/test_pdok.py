@@ -29,7 +29,7 @@ class TestParseCentroide:
 class TestParseDoc:
     def test_volledige_doc(self):
         doc = {
-            "pand_id": "0344100000065895",
+            "adresseerbaarobject_id": "1730010000019576",
             "weergavenaam": "Eikenlaan 7, 9471AA Zuidlaren",
             "postcode": "9471AA",
             "gemeentenaam": "Tynaarlo",
@@ -39,7 +39,7 @@ class TestParseDoc:
             "score": 12.5,
         }
         result = _parse_doc(doc)
-        assert result.pand_id == "0344100000065895"
+        assert result.vbo_id == "1730010000019576"
         assert result.postcode == "9471AA"
         assert result.gemeente == "Tynaarlo"
         assert result.provincie == "Drenthe"
@@ -49,5 +49,5 @@ class TestParseDoc:
     def test_minimale_doc(self):
         """Lege doc crasht niet."""
         result = _parse_doc({})
-        assert result.pand_id is None
+        assert result.vbo_id is None
         assert result.rd_x is None

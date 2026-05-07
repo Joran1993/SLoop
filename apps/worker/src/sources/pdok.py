@@ -16,8 +16,8 @@ _SUGGEST_ENDPOINT = f"{_FREE_ENDPOINT}/free"
 
 @dataclass
 class GeoResult:
-    pand_id: str | None
-    rd_x: float | None       # EPSG:28992
+    vbo_id: str | None        # adresseerbaarobject_id — VBO identificatie
+    rd_x: float | None        # EPSG:28992
     rd_y: float | None
     wgs_lon: float | None
     wgs_lat: float | None
@@ -36,8 +36,8 @@ def geocode_address(address: str, *, retries: int = 3) -> GeoResult | None:
     params = {
         "q": address,
         "fq": "type:(adres OR pand)",
-        "fl": "id,weergavenaam,postcode,woonplaatsnaam,gemeentenaam,provincienaam,"
-              "centroide_rd,centroide_ll,pand_id",
+        "fl": "id,identificatie,adresseerbaarobject_id,weergavenaam,postcode,"
+              "woonplaatsnaam,gemeentenaam,provincienaam,centroide_rd,centroide_ll",
         "rows": 1,
     }
 
@@ -83,7 +83,7 @@ def _parse_doc(doc: dict) -> GeoResult:
     lon, lat = _parse_centroide(doc.get("centroide_ll"))
 
     return GeoResult(
-        pand_id=doc.get("pand_id"),
+        vbo_id=doc.get("adresseerbaarobject_id"),
         rd_x=rd_x,
         rd_y=rd_y,
         wgs_lon=lon,
