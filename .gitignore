@@ -7,6 +7,7 @@ __pycache__/
 *.pyc
 *.pyo
 .venv/
+poetry.toml
 dist/
 *.egg-info/
 .mypy_cache/
@@ -36,6 +37,10 @@ Thumbs.db
 
 # Sentry
 .sentryclirc
+
+# Test fixtures (groot, niet in git)
+apps/worker/tests/fixtures/*.xml
+apps/worker/tests/fixtures/*.json
 
 # Test / analyse bestanden (legacy, nu in worker/src/sources/)
 results.json
