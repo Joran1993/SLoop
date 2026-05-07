@@ -1,0 +1,27 @@
+meta {
+  name: POST /alerts
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{base_url}}/api/alerts
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "name": "Grote panden Noord-Holland",
+    "filter": {
+      "provincies": ["Noord-Holland"],
+      "min_oppervlakte": 500,
+      "min_score": 60
+    },
+    "frequency": "daily"
+  }
+}

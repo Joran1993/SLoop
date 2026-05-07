@@ -1,0 +1,22 @@
+meta {
+  name: POST /billing/checkout
+  type: http
+  seq: 7
+}
+
+post {
+  url: {{base_url}}/api/billing/checkout
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "plan_tier": "pro",
+    "redirect_url": "http://localhost:3000/onboarding/succes"
+  }
+}

@@ -1,0 +1,15 @@
+meta {
+  name: GET /leads (Starter - 1 provincie)
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{base_url}}/api/leads?provincie=Noord-Holland&min_score=40
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}

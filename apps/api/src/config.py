@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     supabase_jwt_secret: str
 
     cors_origins: list[str] = ["http://localhost:3000"]
+    app_base_url: str = "http://localhost:8000"
     debug: bool = True
 
     sentry_dsn: str = ""

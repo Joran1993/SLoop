@@ -1,0 +1,15 @@
+meta {
+  name: GET /leads (Pro - NL-breed)
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{base_url}}/api/leads?min_score=50&sort_by=score_total&sort_dir=desc
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
