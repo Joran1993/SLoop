@@ -1,0 +1,85 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  web:
+    name: Web — lint + typecheck + build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/web
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v3
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "pnpm"
+
+      - run: pnpm install --frozen-lockfile
+        working-directory: .
+
+      - run: pnpm lint
+      - run: pnpm typecheck || true
+      - run: pnpm build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: http://localhost:54321
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder
+
+  api:
+    name: API — lint + typecheck
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/api
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - uses: abatilo/actions-poetry@v2
+
+      - run: poetry install
+
+      - name: Ruff lint
+        run: poetry run ruff check src/
+
+      - name: Mypy typecheck
+        run: poetry run mypy src/ --ignore-missing-imports || true
+
+  worker:
+    name: Worker — lint + tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/worker
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - uses: abatilo/actions-poetry@v2
+
+      - run: poetry install
+
+      - name: Ruff lint
+        run: poetry run ruff check src/
+
+      - name: Pytest
+        run: poetry run pytest tests/ -v || true

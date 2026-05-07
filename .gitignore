@@ -1,0 +1,44 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+dist/
+*.egg-info/
+.mypy_cache/
+.ruff_cache/
+
+# Next.js
+apps/web/.next/
+apps/web/out/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Supabase
+packages/db/supabase/.temp/
+packages/db/supabase/functions/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# Sentry
+.sentryclirc
+
+# Test / analyse bestanden (legacy, nu in worker/src/sources/)
+results.json
+inspect_results.py
+rapport.md
+test_run.json
