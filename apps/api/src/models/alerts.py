@@ -12,6 +12,7 @@ class AlertFilterSchema(BaseModel):
     min_oppervlakte: int | None = None
     min_score: int | None = None
     gebruiksdoelen: list[str] | None = None
+    only_with_vergunning: bool | None = None
 
 
 class AlertCreate(BaseModel):

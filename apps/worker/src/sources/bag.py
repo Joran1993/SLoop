@@ -146,7 +146,6 @@ def get_vbos_for_pand(pand_id: str) -> list[BagVbo]:
         "pandIdentificatie": pand_id,
         "f": "json",
         "limit": 100,
-        "crs": "http://www.opengis.net/def/crs/EPSG/0/28992",
     }
 
     try:

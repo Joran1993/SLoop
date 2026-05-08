@@ -47,3 +47,6 @@ results.json
 inspect_results.py
 rapport.md
 test_run.json
+
+# Local Netlify folder
+.netlify

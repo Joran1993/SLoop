@@ -1,3 +1,5 @@
+set search_path = public, extensions;
+
 -- ── Brondata tabellen ──────────────────────────────────────────────────────
 
 create type parse_status as enum ('ok', 'partial', 'failed');

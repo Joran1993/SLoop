@@ -20,6 +20,9 @@ importers:
       '@tanstack/react-query':
         specifier: ^5.100.9
         version: 5.100.9(react@19.2.4)
+      '@tanstack/react-table':
+        specifier: ^8.21.3
+        version: 8.21.3(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -51,6 +54,9 @@ importers:
         specifier: ^1.4.0
         version: 1.4.0
     devDependencies:
+      '@netlify/plugin-nextjs':
+        specifier: ^5.15.11
+        version: 5.15.11
       '@tailwindcss/postcss':
         specifier: ^4
         version: 4.2.4
@@ -597,6 +603,10 @@ packages:
   '@napi-rs/wasm-runtime@0.2.12':
     resolution: {integrity: sha512-ZVWUcfwY4E/yPitQJl481FjFo3K22D6qF0DuFH6Y/nbnE11GY5uguDxZMGXPQ8WQ0128MXQD7TnfHyK4oWoIJQ==}
 
+  '@netlify/plugin-nextjs@5.15.11':
+    resolution: {integrity: sha512-cx7yoJFYDBFRecGqJaEUuvnHvU+vs9ISn7DUXyijPheaqtbyRy4+z7Mjre9swEJ19ItVeFhuGuXUkl6X5nfJeA==}
+    engines: {node: '>=18.0.0'}
+
   '@next/env@16.2.5':
     resolution: {integrity: sha512-Lb9ElHD2klcyeVD25vW+siPFqz9QMzDUSgvFZNO+dZEKoMHex4viJhVuzBhrXKqb+UKnih7mVYbt50/7KLsSCA==}
 
@@ -839,6 +849,17 @@ packages:
     resolution: {integrity: sha512-Oa44XkaI3kCNN6ME0KByU3xT3SEUNOMfZpHxL6+wFoTm+OeUFYHKdeYVe0aOXlRDm/f15sgLwEt2HDorIdW8+A==}
     peerDependencies:
       react: ^18 || ^19
+
+  '@tanstack/react-table@8.21.3':
+    resolution: {integrity: sha512-5nNMTSETP4ykGegmVkhjcS8tTLW6Vl4axfEGQN3v0zdHYbK4UfoqfPChclTrJ4EoK9QynqAu9oUf8VEmrpZ5Ww==}
+    engines: {node: '>=12'}
+    peerDependencies:
+      react: '>=16.8'
+      react-dom: '>=16.8'
+
+  '@tanstack/table-core@8.21.3':
+    resolution: {integrity: sha512-ldZXEhOBb8Is7xLs01fR3YEc3DERiz5silj8tnGkFZytt1abEvl/GhUmCE0PMLaMPTa3Jk4HbKmRlHmu+gCftg==}
+    engines: {node: '>=12'}
 
   '@ts-morph/common@0.27.0':
     resolution: {integrity: sha512-Wf29UqxWDpc+i61k3oIOzcUfQt79PIT9y/MWfAGlrkjg6lBC1hwDECLXPVJAhWjiGbfBCxZd65F/LIZF3+jeJQ==}
@@ -3713,6 +3734,8 @@ snapshots:
       '@tybys/wasm-util': 0.10.2
     optional: true
 
+  '@netlify/plugin-nextjs@5.15.11': {}
+
   '@next/env@16.2.5': {}
 
   '@next/eslint-plugin-next@16.2.5':
@@ -3906,6 +3929,14 @@ snapshots:
     dependencies:
       '@tanstack/query-core': 5.100.9
       react: 19.2.4
+
+  '@tanstack/react-table@8.21.3(react-dom@19.2.4(react@19.2.4))(react@19.2.4)':
+    dependencies:
+      '@tanstack/table-core': 8.21.3
+      react: 19.2.4
+      react-dom: 19.2.4(react@19.2.4)
+
+  '@tanstack/table-core@8.21.3': {}
 
   '@ts-morph/common@0.27.0':
     dependencies:

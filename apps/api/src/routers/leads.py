@@ -112,29 +112,53 @@ async def list_leads(
 async def export_leads(
     auth: Annotated[AuthContext, Depends(require_pro)],
     provincie: list[str] | None = Query(None),
-    gemeente: list[str] | None = Query(None),
+    gemeente: str | None = Query(None),
     min_score: int | None = Query(None, ge=0, le=100),
+    with_sloopvergunning: bool | None = Query(None),
+    with_signals: bool | None = Query(None),
+    eigenaar_type: str | None = Query(None),
+    gebruiksdoel: str | None = Query(None),
+    datum_van: str | None = Query(None),
     format: str = Query("csv"),
 ):
     """Exporteer leads als CSV. Alleen Pro+."""
     sb = get_service_client()
-    query = sb.table("sloop_leads").select(_LEAD_COLS)
+    query = sb.table("sloop_leads_api").select(
+        "adres,gemeente,provincie,bouwjaar,oppervlakte_m2,"
+        "gebruiksdoel,eigenaar_type,eigenaar_naam,energielabel,"
+        "score_asbest,score_totaal,"
+        "publicatiedatum,source_url,"
+        "has_sloopvergunning,signal_count"
+    ).order("has_sloopvergunning", desc=True).order("score_totaal", desc=True)
 
     if provincie:
         query = query.in_("provincie", provincie)
     if gemeente:
-        query = query.in_("gemeente", gemeente)
+        query = query.ilike("gemeente", f"%{gemeente}%")
     if min_score is not None:
-        query = query.gte("score_total", min_score)
+        query = query.gte("score_totaal", min_score)
+    if with_sloopvergunning:
+        query = query.eq("has_sloopvergunning", True)
+    if with_signals:
+        query = query.gt("signal_count", 0)
+    if eigenaar_type:
+        query = query.eq("eigenaar_type", eigenaar_type)
+    if gebruiksdoel:
+        query = query.contains("gebruiksdoel", [gebruiksdoel])
+    if datum_van:
+        query = query.gte("publicatiedatum", datum_van)
 
-    result = query.order("score_total", desc=True).limit(5000).execute()
+    result = query.limit(5000).execute()
     rows = result.data or []
 
     # Audit log
     sb.table("lead_exports").insert({
         "organization_id": auth.org_id,
         "format": format,
-        "filter_used": {"provincie": provincie, "gemeente": gemeente, "min_score": min_score},
+        "filter_used": {
+            "provincie": provincie, "gemeente": gemeente, "min_score": min_score,
+            "with_sloopvergunning": with_sloopvergunning, "with_signals": with_signals,
+        },
         "lead_count": len(rows),
     }).execute()
 
@@ -187,17 +211,18 @@ def _validate_sort(sort_by: str, sort_dir: str) -> None:
 
 def _as_csv(rows: list[dict]) -> Response:
     cols = [
-        "address_full", "gemeente", "provincie", "bouwjaar", "oppervlakte_m2",
-        "gebruiksdoelen", "energielabel", "asbest_risico_score", "score_total",
-        "datum_publicatie", "koop_url",
+        "adres", "gemeente", "provincie", "bouwjaar", "oppervlakte_m2",
+        "gebruiksdoel", "eigenaar_type", "eigenaar_naam", "energielabel", "score_asbest",
+        "score_totaal", "publicatiedatum", "source_url",
+        "has_sloopvergunning", "signal_count",
     ]
     buf = io.StringIO()
     writer = csv.DictWriter(buf, fieldnames=cols, extrasaction="ignore")
     writer.writeheader()
     for row in rows:
         row = dict(row)
-        if isinstance(row.get("gebruiksdoelen"), list):
-            row["gebruiksdoelen"] = "|".join(row["gebruiksdoelen"])
+        if isinstance(row.get("gebruiksdoel"), list):
+            row["gebruiksdoel"] = "|".join(row["gebruiksdoel"])
         writer.writerow(row)
     return Response(
         content=buf.getvalue(),

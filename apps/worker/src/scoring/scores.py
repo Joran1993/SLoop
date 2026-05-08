@@ -16,16 +16,37 @@ _DEFAULT_WEIGHTS = {
     "circulair": 0.25,
 }
 
-# Materiaal-kentallen per gebruiksdoel (kg/m²)
-_MATERIAAL_KENTALLEN: dict[str, dict[str, float]] = {
-    "woonfunctie":       {"beton_kg": 1500, "hout_kg": 150, "glas_kg": 25, "metaal_kg": 20},
-    "kantoorfunctie":    {"beton_kg": 1800, "hout_kg": 80,  "glas_kg": 50, "metaal_kg": 40},
-    "industriefunctie":  {"beton_kg": 1200, "hout_kg": 200, "glas_kg": 15, "metaal_kg": 80},
-    "winkelfunctie":     {"beton_kg": 1600, "hout_kg": 100, "glas_kg": 60, "metaal_kg": 30},
-    "gezondheidsfunctie":{"beton_kg": 1700, "hout_kg": 90,  "glas_kg": 40, "metaal_kg": 35},
-    "onderwijsfunctie":  {"beton_kg": 1400, "hout_kg": 120, "glas_kg": 35, "metaal_kg": 25},
-    # Default voor onbekende/overige functies
-    "_default":          {"beton_kg": 1400, "hout_kg": 120, "glas_kg": 30, "metaal_kg": 30},
+# Totaalgewicht per gebruiksdoel (kg/m²) — alle materialen samen
+# Basis: constructiebeton + metselwerk + hout + metaal + glas
+# Bouwjaar-correctie wordt apart toegepast
+_GEWICHT_PER_M2: dict[str, float] = {
+    "woonfunctie":            1400,  # mix baksteen/beton afhankelijk van periode
+    "kantoorfunctie":         1700,  # zwaarder skelet, meer glas
+    "industriefunctie":       900,   # lichtere constructie, staalskelet, grote overspanning
+    "winkelfunctie":          1500,
+    "gezondheidszorgfunctie": 1700,
+    "onderwijsfunctie":       1400,
+    "_default":               1300,
+}
+
+# Metaalgehalte (% van totaalgewicht) per gebruiksdoel
+# Metaal is de enige significante residustroom met positieve waarde
+_METAAL_PCT: dict[str, float] = {
+    "industriefunctie":  0.08,   # staalskelet, dakbeplating
+    "kantoorfunctie":    0.04,
+    "woonfunctie":       0.015,  # wapeningsstaal in beton ~1.5%
+    "_default":          0.03,
+}
+
+# Sloopkosten bandbreedte (€/m²) exclusief asbestsanering
+_SLOOPKOSTEN_M2: dict[str, tuple[int, int]] = {
+    "industriefunctie":       (12, 22),  # relatief eenvoudig, grote volumes
+    "kantoorfunctie":         (22, 38),
+    "woonfunctie":            (28, 45),
+    "winkelfunctie":          (20, 35),
+    "gezondheidszorgfunctie": (30, 50),
+    "onderwijsfunctie":       (25, 42),
+    "_default":               (20, 40),
 }
 
 
@@ -118,9 +139,33 @@ def score_circulair_potentieel(
     return int(min(bouwjaar_score + label_score, 100))
 
 
-def score_bereikbaarheid() -> int:
-    """Placeholder v1: vaste waarde 50. Vervangen door PostGIS-afstand in v2."""
-    return 50
+# Bereikbaarheid per provincie: agrarisch/industrieel = hoog, urban = lager.
+# Bron: mix van bevolkingsdichtheid en industriële activiteit per provincie.
+_BEREIKBAARHEID_PER_PROVINCIE: dict[str, int] = {
+    "Drenthe": 80,
+    "Flevoland": 72,
+    "Friesland": 78,
+    "Gelderland": 65,
+    "Groningen": 75,
+    "Limburg": 62,
+    "Noord-Brabant": 60,
+    "Noord-Holland": 45,
+    "Overijssel": 68,
+    "Utrecht": 48,
+    "Zeeland": 80,
+    "Zuid-Holland": 42,
+}
+
+
+def score_bereikbaarheid(provincie: str | None = None, gemeente: str | None = None) -> int:
+    """
+    Bereikbaarheid gebaseerd op provincie (bevolkingsdichtheid/industrieligging).
+    Hoge score = goed bereikbaar voor vrachtverkeer (agrarisch/industrieel).
+    Lage score = moeilijk bereikbaar (dichte stedelijke omgeving).
+    """
+    if provincie and provincie in _BEREIKBAARHEID_PER_PROVINCIE:
+        return _BEREIKBAARHEID_PER_PROVINCIE[provincie]
+    return 55  # Onbekend: neutraal
 
 
 def calculate_total_score(
@@ -128,13 +173,15 @@ def calculate_total_score(
     oppervlakte_m2: int | None,
     energielabel: str | None,
     weights: dict[str, float] | None = None,
+    provincie: str | None = None,
+    gemeente: str | None = None,
 ) -> ScoreBreakdown:
     """Bereken totaalscore met optionele custom gewichten (Enterprise)."""
     w = weights if weights else _DEFAULT_WEIGHTS
 
     asbest = score_asbest_risico(bouwjaar)
     omvang = score_omvang(oppervlakte_m2)
-    bereikbaarheid = score_bereikbaarheid()
+    bereikbaarheid = score_bereikbaarheid(provincie, gemeente)
     circulair = score_circulair_potentieel(bouwjaar, energielabel)
 
     total = (
@@ -154,24 +201,73 @@ def calculate_total_score(
     )
 
 
-def estimate_materiaalvolumes(
+_METAALPRIJS_EUR_PER_KG = 0.18  # Gemengd schroot — conservatieve marktprijs
+
+# Asbest fractie van vloeroppervlak per bouwperiode en gebruiksdoel
+# Industriefunctie: dakplaten, wand-elementen → hogere fractie
+def _asbest_fractie(bouwjaar: int, gebruiksdoelen: list[str]) -> float:
+    is_industrie = any("industrie" in d.lower() for d in gebruiksdoelen)
+    if bouwjaar < 1945:
+        return 0.08 if is_industrie else 0.05
+    if bouwjaar < 1976:
+        return 0.35 if is_industrie else 0.22
+    if bouwjaar < 1993:
+        return 0.12 if is_industrie else 0.08
+    return 0.0
+
+
+def _resolve_gebruiksdoel(gebruiksdoelen: list[str], lookup: dict) -> object:
+    for doel in gebruiksdoelen:
+        doel_lower = doel.lower().replace(" ", "")
+        for key in lookup:
+            if key != "_default" and key in doel_lower:
+                return lookup[key]
+    return lookup["_default"]
+
+
+def estimate_sloopindicatoren(
     gebruiksdoelen: list[str] | None,
     oppervlakte_m2: int | None,
-) -> dict[str, float]:
-    """Ruwe materiaalvolume-inschatting op basis van gebruiksdoel × m²."""
+    bouwjaar: int | None,
+) -> dict:
+    """
+    Vier bruikbare indicatoren voor een sloopbedrijf:
+      totaal_ton       — totale sloopafvalmassa (maatgevend voor planning/transport)
+      residuwaarde_eur — schatting metaalwaarde (opbrengst)
+      asbest_m2        — asbestverdacht oppervlak (saneringskosten)
+      sloopkosten_min/max — indicatieve sloopkosten excl. asbestsanering
+    """
     if not oppervlakte_m2 or oppervlakte_m2 <= 0:
         return {}
 
-    # Kies de dominante gebruiksfunctie (eerste match in kentallen-tabel)
-    kentallen = _MATERIAAL_KENTALLEN["_default"]
-    for doel in (gebruiksdoelen or []):
-        doel_lower = doel.lower().replace(" ", "")
-        for key in _MATERIAAL_KENTALLEN:
-            if key != "_default" and key in doel_lower:
-                kentallen = _MATERIAAL_KENTALLEN[key]
-                break
+    doelen = gebruiksdoelen or []
 
-    return {
-        material: round(kg_per_m2 * oppervlakte_m2)
-        for material, kg_per_m2 in kentallen.items()
+    kg_per_m2 = _resolve_gebruiksdoel(doelen, _GEWICHT_PER_M2)
+    totaal_kg = kg_per_m2 * oppervlakte_m2
+    totaal_ton = round(totaal_kg / 1000, 1)
+
+    metaal_pct = _resolve_gebruiksdoel(doelen, _METAAL_PCT)
+    metaal_kg = totaal_kg * metaal_pct
+    residuwaarde_eur = int(round(metaal_kg * _METAALPRIJS_EUR_PER_KG / 100) * 100)
+
+    if bouwjaar is None:
+        asbest_m2 = None
+    elif bouwjaar >= 1993:
+        asbest_m2 = 0
+    else:
+        fractie = _asbest_fractie(bouwjaar, doelen)
+        asbest_m2 = int(round(oppervlakte_m2 * fractie))
+
+    kosten_low, kosten_high = _resolve_gebruiksdoel(doelen, _SLOOPKOSTEN_M2)
+    sloopkosten_min = int(round(kosten_low * oppervlakte_m2 / 1000) * 1000)
+    sloopkosten_max = int(round(kosten_high * oppervlakte_m2 / 1000) * 1000)
+
+    result: dict = {
+        "totaal_ton": totaal_ton,
+        "residuwaarde_eur": residuwaarde_eur,
+        "sloopkosten_min": sloopkosten_min,
+        "sloopkosten_max": sloopkosten_max,
     }
+    if asbest_m2 is not None:
+        result["asbest_m2"] = asbest_m2
+    return result

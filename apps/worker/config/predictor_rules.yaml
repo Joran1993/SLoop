@@ -1,0 +1,54 @@
+# Predictor v1 — regelgebaseerd model voor sloopkans
+# Pas gewichten hier aan zonder code te wijzigen.
+# Alle gewichten worden genormaliseerd naar 0–1 via tanh(score * schaal).
+
+signal_weights:
+  # Signaaltypes → basisgewicht (0.0–1.0)
+  bestemmingswijziging:          0.85
+  bestemmingswijziging_herziening: 0.70
+  omgevingsplan_mutatie:         0.90
+  sloopmelding:                  1.00   # directe sloopmelding = sterkst signaal
+  eigendomsoverdracht:           0.60
+  corporatie_voornemen:          0.75
+  mer_aanmelding:                0.65
+  concept_omgevingsvergunning:   0.55
+  nieuwsbericht_sloop:           0.40
+
+signal_strength_multiplier:
+  high:   1.00
+  medium: 0.75
+  low:    0.50
+
+# Bonus voor meerdere signalen op hetzelfde pand/cluster
+diversity_bonus:
+  # aantal unieke signaaltypes → extra kans
+  1: 0.00
+  2: 0.08
+  3: 0.15
+  4: 0.20
+  5: 0.25
+
+# Bouwjaar: oudere panden hebben hogere kans
+bouwjaar_score:
+  voor_1945: 0.20
+  voor_1970: 0.12
+  voor_1985: 0.06
+  voor_2000: 0.02
+  na_2000:   0.00
+
+# Horizon-regels per signaaltype (maanden min–max)
+horizon:
+  bestemmingswijziging:          {min: 18, max: 30}
+  bestemmingswijziging_herziening: {min: 12, max: 24}
+  omgevingsplan_mutatie:         {min: 18, max: 36}
+  sloopmelding:                  {min: 1,  max: 6}
+  eigendomsoverdracht:           {min: 6,  max: 18}
+  corporatie_voornemen:          {min: 12, max: 30}
+  mer_aanmelding:                {min: 24, max: 48}
+  concept_omgevingsvergunning:   {min: 6,  max: 18}
+  nieuwsbericht_sloop:           {min: 3,  max: 12}
+
+# Drempelwaarden
+thresholds:
+  min_kans_opslaan: 0.10       # projecten onder deze kans worden niet opgeslagen
+  clustering_radius_m: 200     # clusteer signalen binnen 200m

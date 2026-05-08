@@ -11,6 +11,10 @@ class Settings(BaseSettings):
 
     koop_poll_interval_hours: int = 6
     koop_lookback_days: int = 2
+    pipeline_lookback_days: int = 90
+
+    resend_api_key: str = ""
+    resend_from_email: str = "Sloopradar <alerts@sloopradar.nl>"
 
 
 settings = Settings()

@@ -1,3 +1,5 @@
+set search_path = public, extensions;
+
 -- ── Lead-laag ──────────────────────────────────────────────────────────────
 
 create type eigenaar_type as enum (

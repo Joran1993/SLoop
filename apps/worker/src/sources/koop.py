@@ -78,7 +78,7 @@ def fetch_page(
         "recordSchema":   "gzd",
     }
 
-    for attempt in range(6):
+    for attempt in range(8):
         try:
             resp = session.get(SRU_ENDPOINT, params=params, timeout=30)
         except requests.RequestException as exc:

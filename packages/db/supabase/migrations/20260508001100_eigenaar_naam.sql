@@ -1,0 +1,56 @@
+-- Voeg eigenaar_naam toe aan sloop_leads voor bekende corporaties/gemeenten.
+-- Wordt ingevuld door koop_pipeline en eindhoven_pipeline op basis van
+-- inferred eigenaar_type + gemeente-corporatie mapping (geen externe API nodig).
+
+ALTER TABLE public.sloop_leads
+  ADD COLUMN IF NOT EXISTS eigenaar_naam text;
+
+-- Herbouw view met eigenaar_naam
+DROP VIEW IF EXISTS public.sloop_leads_api;
+
+CREATE VIEW public.sloop_leads_api AS
+SELECT
+  sl.id,
+  COALESCE(sr.koop_id, sl.id::text)  AS publicatie_id,
+  sl.address_full                     AS adres,
+  sl.gemeente,
+  sl.provincie,
+  sl.postcode,
+  sl.bouwjaar,
+  sl.oppervlakte_m2,
+  sl.energielabel,
+  sl.score_total                      AS score_totaal,
+  sl.asbest_risico_score              AS score_asbest,
+  sl.omvang_score                     AS score_omvang,
+  sl.bereikbaarheid_score             AS score_bereikbaarheid,
+  sl.circulair_potentieel             AS score_circulair,
+  sl.gebruiksdoelen                   AS gebruiksdoel,
+  sl.eigenaar_type,
+  sl.eigenaar_naam,
+  CASE WHEN sl.geometry IS NOT NULL
+    THEN ST_X(ST_Transform(sl.geometry, 4326))
+  END                                 AS longitude,
+  CASE WHEN sl.geometry IS NOT NULL
+    THEN ST_Y(ST_Transform(sl.geometry, 4326))
+  END                                 AS latitude,
+  sl.datum_publicatie                 AS publicatiedatum,
+  COALESCE(sr.titel, sl.address_full) AS titel,
+  sl.created_at,
+  sl.pand_id                          AS bag_pand_id,
+  sl.source_type,
+  sl.koop_url                         AS source_url,
+  sl.tender_window_estimate_weeks,
+  sl.materiaal_volume_estimate,
+  bp.status                           AS bag_pand_status,
+  (bp.status = 'Sloopvergunning verleend') AS has_sloopvergunning,
+  (
+    SELECT COUNT(*)::int
+    FROM public.pipeline_signals ps
+    WHERE ps.bag_pand_id = sl.pand_id
+      AND ps.signal_type NOT IN ('sloopmelding')
+  )                                   AS signal_count
+FROM public.sloop_leads sl
+LEFT JOIN public.sloopmeldingen_raw sr ON sr.id = sl.sloopmelding_id
+LEFT JOIN public.bag_panden bp ON bp.pand_id = sl.pand_id;
+
+ALTER VIEW public.sloop_leads_api SET (security_invoker = on);
