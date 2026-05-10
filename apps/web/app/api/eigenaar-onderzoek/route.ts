@@ -11,13 +11,24 @@ export async function POST(req: NextRequest) {
   }
 
   const locatie = [adres, postcode, gemeente].filter(Boolean).join(", ");
-  const prompt = `Zoek op wie de eigenaar is van het pand op het adres: ${locatie}${bag_pand_id ? ` (BAG pand-ID: ${bag_pand_id})` : ""}.
+  const gemeente = locatie.split(",").pop()?.trim() ?? "";
+  const straatHuisnummer = locatie.split(",")[0]?.trim() ?? locatie;
 
-Zoek naar: eigendomsregistratie, woningcorporatie, vastgoedbedrijf, gemeente of particulier eigenaar.
+  const prompt = `Bepaal wie de eigenaar is van: ${locatie}${bag_pand_id ? ` (BAG ID: ${bag_pand_id})` : ""}.
 
-BELANGRIJK: Als het een gewoon woonhuis is van een particulier (geen corporatie, geen bedrijf, geen instelling), stuur dan ALLEEN de tekst "WOONHUIS" terug en verder niets.
+Doorloop deze zoekvolgorde en stop zodra je een antwoord hebt:
 
-Voor alle andere gevallen (corporatie, bedrijf, gemeente, instelling, gemengd gebruik): geef je bevindingen als maximaal 3 zinnen. Vermeld de naam als je die vindt. Begin direct met de inhoud.`;
+1. Zoek op: "${straatHuisnummer}" "${gemeente}" sloopvergunning — de aanvraag of vergunning vermeldt vaak de aanvrager/eigenaar bij naam.
+2. Zoek op: "${straatHuisnummer}" "${gemeente}" eigenaar corporatie — controleer of een woningcorporatie dit adres in haar portefeuille heeft.
+3. Zoek welke woningcorporaties actief zijn in ${gemeente || "deze gemeente"} (bijv. Acantus, Woonzorg, Lefier, Wonen Emmen, etc.) en zoek vervolgens "[corporatienaam] ${straatHuisnummer}".
+4. Zoek op: "${straatHuisnummer}" "${gemeente}" sloop renovatie nieuwbouw — nieuwsberichten, bewonersberichten of projectpagina's noemen dikwijls de opdrachtgever.
+5. Zoek op: site:officielebekendmakingen.nl "${straatHuisnummer}" — de publicatietekst bevat soms de naam van de aanvrager.
+6. Zoek op: "${straatHuisnummer}" "${gemeente}" vastgoed bv nv stichting gemeente.
+
+REGELS:
+- Geef nooit op na één mislukte zoekopdracht. Probeer alle stappen.
+- Als het een gewoon woonhuis van een particulier blijkt: stuur ALLEEN "WOONHUIS" terug.
+- Anders: maximaal 2 zinnen. Noem de eigenaar bij naam als je die vindt. Zeg wat je bron was (bijv. "Uit de sloopvergunningaanvraag" of "Acantus beheert dit complex"). Begin direct met de inhoud.`;
 
   try {
     const response = await client.messages.create({
@@ -27,7 +38,7 @@ Voor alle andere gevallen (corporatie, bedrijf, gemeente, instelling, gemengd ge
         {
           type: "web_search_20250305" as const,
           name: "web_search",
-          max_uses: 3,
+          max_uses: 6,
         },
       ],
       messages: [{ role: "user", content: prompt }],
