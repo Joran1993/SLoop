@@ -13,9 +13,11 @@ export async function POST(req: NextRequest) {
   const locatie = [adres, postcode, gemeente].filter(Boolean).join(", ");
   const prompt = `Zoek op wie de eigenaar is van het pand op het adres: ${locatie}${bag_pand_id ? ` (BAG pand-ID: ${bag_pand_id})` : ""}.
 
-Zoek naar: eigendomsregistratie, woningcorporatie, vastgoedbedrijf, gemeente of particulier eigenaar. Kijk ook naar recente nieuwsberichten, bestemmingsplan-documenten of openbare registers.
+Zoek naar: eigendomsregistratie, woningcorporatie, vastgoedbedrijf, gemeente of particulier eigenaar.
 
-Geef je bevindingen terug als één alinea van maximaal 3 zinnen. Vermeld de naam van de eigenaar als je die vindt, anders je best educated guess op basis van wat je vindt. Begin direct met de inhoud, geen inleiding.`;
+BELANGRIJK: Als het een gewoon woonhuis is van een particulier (geen corporatie, geen bedrijf, geen instelling), stuur dan ALLEEN de tekst "WOONHUIS" terug en verder niets.
+
+Voor alle andere gevallen (corporatie, bedrijf, gemeente, instelling, gemengd gebruik): geef je bevindingen als maximaal 3 zinnen. Vermeld de naam als je die vindt. Begin direct met de inhoud.`;
 
   try {
     const response = await client.messages.create({

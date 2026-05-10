@@ -248,10 +248,18 @@ export function LeadDetailPanel({ leadId, onClose }: LeadDetailPanelProps) {
                     )}
                     {onderzoekTekst && (
                       <div className="rounded-md bg-muted/60 px-2.5 py-2 space-y-1">
-                        <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">Gevonden via web</p>
-                        <p className="text-[11px] text-foreground leading-snug">{onderzoekTekst}</p>
+                        {onderzoekTekst === "WOONHUIS" ? (
+                          <p className="text-[11px] text-muted-foreground leading-snug">
+                            Dit is een woonhuis — eigenaarsinformatie van particulieren is niet openbaar beschikbaar.
+                          </p>
+                        ) : (
+                          <>
+                            <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">Gevonden via web</p>
+                            <p className="text-[11px] text-foreground leading-snug">{onderzoekTekst}</p>
+                          </>
+                        )}
                         <button
-                          onClick={() => { setOnderzoekTekst(null); }}
+                          onClick={() => setOnderzoekTekst(null)}
                           className="text-[10px] text-muted-foreground hover:text-foreground transition-colors"
                         >
                           Opnieuw zoeken
