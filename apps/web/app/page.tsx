@@ -5,15 +5,12 @@ import { createClient } from "@/lib/supabase/server";
 async function getPublicStats() {
   try {
     const supabase = await createClient();
-    const { data } = await supabase
-      .from("pipeline_projects_api")
-      .select("source_type")
-      .in("source_type", ["eindhoven_vergunning", "pijplijn", "koop_sloopmelding"]);
-    if (!data) return { vroeg: 72, pijplijn: 200, totaal: 1750 };
+    const { data, error } = await supabase.rpc("get_pipeline_stats");
+    if (error || !data) return { vroeg: 72, pijplijn: 200, totaal: 1750 };
     return {
-      vroeg: data.filter((r) => r.source_type === "eindhoven_vergunning").length,
-      pijplijn: data.filter((r) => r.source_type === "pijplijn").length,
-      totaal: data.length,
+      vroeg:    Number(data.vroeg    ?? 72),
+      pijplijn: Number(data.pijplijn ?? 200),
+      totaal:   Number(data.totaal   ?? 1750),
     };
   } catch {
     return { vroeg: 72, pijplijn: 200, totaal: 1750 };
