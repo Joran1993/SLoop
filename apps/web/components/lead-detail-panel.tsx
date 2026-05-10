@@ -1,24 +1,91 @@
 "use client";
 
-import { X, Building2, Calendar, Ruler, Zap, Radio, User, ExternalLink, Clock, Package, ShieldCheck, Link2, Check, Phone, Globe, Search } from "lucide-react";
+import {
+  X, Building2, Calendar, Ruler, Radio, User, ExternalLink,
+  Phone, Globe, Search, Link2, Check, AlertTriangle, Clock, MapPin, Eye,
+} from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { leadQueryOptions, pipelineSignalsQueryOptions } from "@/lib/queries";
-import { ScoreBadge } from "./score-badge";
 import { signalTypeLabel, eigenaarTypeLabel } from "@/lib/signal-labels";
-import type { SloopIndicatoren } from "@/lib/api";
 
 interface LeadDetailPanelProps {
   leadId: string;
   onClose: () => void;
 }
 
-const scoreLabels = [
-  { key: "score_asbest", label: "Asbestrisico", weight: "25%" },
-  { key: "score_omvang", label: "Omvang pand", weight: "35%" },
-  { key: "score_bereikbaarheid", label: "Bereikbaarheid", weight: "15%" },
-  { key: "score_circulair", label: "Circulair potentieel", weight: "25%" },
-] as const;
+function grootte(m2: number | null | undefined) {
+  if (!m2) return null;
+  if (m2 < 500) return { label: "Klein", sub: `${m2.toLocaleString("nl-NL")} m²` };
+  if (m2 < 2000) return { label: "Middel", sub: `${m2.toLocaleString("nl-NL")} m²` };
+  return { label: "Groot", sub: `${m2.toLocaleString("nl-NL")} m²` };
+}
+
+function SignaalTiming({ sourceType, tenderWeeks, signals }: {
+  sourceType?: string | null;
+  tenderWeeks?: number | null;
+  signals?: Array<{ signal_type: string }>;
+}) {
+  const hasVerleend = signals?.some(s =>
+    s.signal_type === "verleende_sloopvergunning" || s.signal_type === "sloopvergunning_verleend"
+  );
+  const hasSloopmelding = signals?.some(s => s.signal_type === "sloopmelding");
+
+  if (sourceType === "pijplijn") {
+    const months = tenderWeeks ? Math.round(tenderWeeks / 4.33) : null;
+    const hasAanvraag = signals?.some(s => s.signal_type === "aangevraagde_sloopvergunning");
+    const tekst = hasAanvraag
+      ? "Vergunning aangevraagd, nog niet verleend. Sloopbedrijf is waarschijnlijk nog niet geselecteerd — goed moment om contact te leggen."
+      : "Vroeg planningsstadium — bestemmingsplan of vergelijkbare wijziging gedetecteerd. Zet dit pand in de gaten.";
+    return (
+      <div className="flex items-start gap-2 rounded-md bg-blue-50 border border-blue-200 px-3 py-2.5 dark:bg-blue-950/30 dark:border-blue-900">
+        <Eye className="h-4 w-4 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
+        <div>
+          <p className="text-xs font-semibold text-blue-800 dark:text-blue-300">
+            Pijplijn{months ? ` — nog ±${months} maanden` : ""}
+          </p>
+          <p className="text-[11px] text-blue-700/80 dark:text-blue-500 mt-0.5">
+            {tekst}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (sourceType !== "eindhoven_vergunning") {
+    let titel = "Laat signaal";
+    let tekst = "De eigenaar belt waarschijnlijk al sloopbedrijven. Bel vandaag nog om te verifiëren.";
+    if (hasSloopmelding) {
+      tekst = "Sloopmelding ingediend — aannemer is hoogstwaarschijnlijk al geselecteerd.";
+    } else if (hasVerleend) {
+      tekst = "Vergunning verleend — eigenaar vraagt nu actief offertes op. Bel vandaag.";
+    }
+    return (
+      <div className="flex items-start gap-2 rounded-md bg-amber-50 border border-amber-200 px-3 py-2.5 dark:bg-amber-950/30 dark:border-amber-900">
+        <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+        <div>
+          <p className="text-xs font-semibold text-amber-800 dark:text-amber-300">{titel}</p>
+          <p className="text-[11px] text-amber-700/80 dark:text-amber-500 mt-0.5">{tekst}</p>
+        </div>
+      </div>
+    );
+  }
+
+  const weeks = tenderWeeks ?? 12;
+  return (
+    <div className="flex items-start gap-2 rounded-md bg-emerald-50 border border-emerald-200 px-3 py-2.5 dark:bg-emerald-950/30 dark:border-emerald-900">
+      <Clock className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+      <div>
+        <p className="text-xs font-semibold text-emerald-800 dark:text-emerald-300">
+          Vroeg signaal — nog ±{weeks} weken
+        </p>
+        <p className="text-[11px] text-emerald-700/80 dark:text-emerald-500 mt-0.5">
+          Aanvraag net gepubliceerd. Eigenaar belt nog geen sloopbedrijven — jij kunt de eerste zijn.
+        </p>
+      </div>
+    </div>
+  );
+}
 
 export function LeadDetailPanel({ leadId, onClose }: LeadDetailPanelProps) {
   const { data: lead, isLoading } = useQuery(leadQueryOptions(leadId));
@@ -28,18 +95,25 @@ export function LeadDetailPanel({ leadId, onClose }: LeadDetailPanelProps) {
   const [copied, setCopied] = useState(false);
 
   function copyLink() {
-    const url = `${window.location.origin}/leads/${leadId}`;
-    navigator.clipboard.writeText(url).then(() => {
+    navigator.clipboard.writeText(`${window.location.origin}/leads/${leadId}`).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     });
   }
 
+  const eigenaarNaam =
+    signals.find((s) => s.eigenaar_naam)?.eigenaar_naam ??
+    lead?.eigenaar_naam ??
+    lead?.contact_naam ?? null;
+
+  const hasContactInfo = !!(lead?.contact_telefoon || lead?.contact_website || lead?.contact_email);
+  const gr = grootte(lead?.oppervlakte_m2);
+
   return (
-    <div className="flex h-full w-80 flex-col border-l border-border bg-card">
+    <div className="flex h-full w-[340px] flex-col border-l border-border bg-card">
       {/* Header */}
       <div className="flex items-center justify-between border-b border-border px-4 py-3">
-        <span className="text-sm font-medium">Lead details</span>
+        <span className="text-sm font-semibold">Lead details</span>
         <div className="flex items-center gap-1">
           <button
             onClick={copyLink}
@@ -48,10 +122,7 @@ export function LeadDetailPanel({ leadId, onClose }: LeadDetailPanelProps) {
           >
             {copied ? <Check className="h-4 w-4 text-emerald-500" /> : <Link2 className="h-4 w-4" />}
           </button>
-          <button
-            onClick={onClose}
-            className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-          >
+          <button onClick={onClose} className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
             <X className="h-4 w-4" />
           </button>
         </div>
@@ -64,194 +135,60 @@ export function LeadDetailPanel({ leadId, onClose }: LeadDetailPanelProps) {
       )}
 
       {lead && (
-        <div className="flex-1 overflow-auto p-4 space-y-5">
-          {/* Title */}
-          <div>
-            <h2 className="text-sm font-semibold leading-snug">
-              {lead.adres ?? "Onbekend adres"}
-            </h2>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              {lead.gemeente}
-              {lead.provincie ? ` · ${lead.provincie}` : ""}
-            </p>
-          </div>
-
-          {/* Sloopvergunning verleend banner */}
-          {lead.has_sloopvergunning && (
-            <div className="flex items-center gap-2 rounded-md bg-red-50 border border-red-200 px-3 py-2 dark:bg-red-950/30 dark:border-red-900">
-              <ShieldCheck className="h-4 w-4 text-red-600 dark:text-red-400 shrink-0" />
-              <div>
-                <p className="text-xs font-semibold text-red-700 dark:text-red-400">Sloopvergunning verleend</p>
-                <p className="text-[11px] text-red-600/80 dark:text-red-500">BAG-status bevestigd — sloop aanstaande</p>
-              </div>
-            </div>
-          )}
-
-          {/* Score totaal */}
-          <div className="flex items-center gap-2">
-            <span className="text-2xl font-bold tabular-nums">
-              {lead.score_totaal != null ? Math.round(lead.score_totaal) : "—"}
-            </span>
-            <div className="text-xs text-muted-foreground leading-tight">
-              <div>Score</div>
-              <div>/ 100</div>
-            </div>
-          </div>
-
-          {/* Score breakdown */}
-          <div className="space-y-2">
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-              Scorebreakdown
-            </p>
-            {scoreLabels.map(({ key, label, weight }) => {
-              const val = lead[key] as number | null;
-              const pct = val != null ? val : 0;
-              return (
-                <div key={key} className="space-y-1">
-                  <div className="flex items-center justify-between text-xs">
-                    <span>
-                      {label}{" "}
-                      <span className="text-muted-foreground">({weight})</span>
-                    </span>
-                    <ScoreBadge score={val} />
-                  </div>
-                  <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
-                    <div
-                      className="h-full rounded-full bg-accent transition-all"
-                      style={{ width: `${pct}%` }}
-                    />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Pand details */}
-          <div className="space-y-2 border-t border-border pt-4">
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-              Pand
-            </p>
-            <dl className="space-y-1.5">
-              <Row
-                icon={<Calendar className="h-3.5 w-3.5" />}
-                label="Bouwjaar"
-                value={lead.bouwjaar?.toString() ?? "—"}
-              />
-              <Row
-                icon={<Ruler className="h-3.5 w-3.5" />}
-                label="Oppervlakte"
-                value={
-                  lead.oppervlakte_m2 != null
-                    ? `${lead.oppervlakte_m2.toLocaleString("nl-NL")} m²`
-                    : "—"
-                }
-              />
-              <Row
-                icon={<Zap className="h-3.5 w-3.5" />}
-                label="Energielabel"
-                value={lead.energielabel ?? "—"}
-              />
-              <Row
-                icon={<Building2 className="h-3.5 w-3.5" />}
-                label="Gebruiksdoel"
-                value={lead.gebruiksdoel?.join(", ") ?? "—"}
-              />
-            </dl>
-          </div>
-
-          {/* Publicatie */}
-          <div className="space-y-1.5 border-t border-border pt-4">
-            <div className="flex items-center justify-between">
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                Melding
+        <div className="flex-1 overflow-auto p-4 space-y-4">
+          {/* Adres + grootte */}
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <h2 className="text-base font-semibold leading-snug tracking-tight">{lead.adres ?? "Onbekend adres"}</h2>
+              <p className="text-sm text-muted-foreground mt-0.5">
+                {lead.gemeente}{lead.provincie ? ` · ${lead.provincie}` : ""}
               </p>
-              {lead.source_type && (
-                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">
-                  {lead.source_type === "eindhoven_vergunning" ? "Vergunning" : "Sloopmelding"}
-                </span>
-              )}
             </div>
-            <p className="text-xs text-muted-foreground">
-              {lead.publicatiedatum
-                ? new Date(lead.publicatiedatum).toLocaleDateString("nl-NL", {
-                    day: "numeric",
-                    month: "long",
-                    year: "numeric",
-                  })
-                : "—"}
-            </p>
-            {lead.titel && (
-              <p className="text-xs text-muted-foreground line-clamp-3">
-                {lead.titel}
-              </p>
-            )}
-            {lead.tender_window_estimate_weeks != null && (
-              <div className="flex items-center gap-1.5 text-xs mt-1">
-                <Clock className="h-3.5 w-3.5 text-muted-foreground" />
-                <span className="text-muted-foreground">Actievenster:</span>
-                <span className="font-medium">±{lead.tender_window_estimate_weeks} weken</span>
+            {gr && (
+              <div className="text-right shrink-0">
+                <div className="text-sm font-semibold">{gr.label}</div>
+                <div className="text-xs text-muted-foreground">{gr.sub}</div>
               </div>
             )}
-            {lead.source_url && (
-              <a
-                href={lead.source_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 text-xs text-accent hover:underline mt-1"
-              >
-                <ExternalLink className="h-3 w-3" />
-                Originele publicatie bekijken
-              </a>
-            )}
           </div>
 
-          {/* Eigenaar & Contact */}
+          {/* Signaal timing */}
+          <SignaalTiming
+            sourceType={lead.source_type}
+            tenderWeeks={lead.tender_window_estimate_weeks}
+            signals={signals}
+          />
+
+          {/* Contact — primaire sectie */}
           <div className="space-y-2 border-t border-border pt-4">
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-              Eigenaar
+            <p className="text-[11px] font-semibold text-muted-foreground">
+              Eigenaar & Contact
             </p>
 
-            {/* Naam */}
-            {(() => {
-              const naam =
-                signals.find((s) => s.eigenaar_naam)?.eigenaar_naam ??
-                lead.eigenaar_naam ??
-                lead.contact_naam;
-              const isProbabilistic = !signals.find((s) => s.eigenaar_naam) &&
-                lead.eigenaar_naam &&
-                lead.eigenaar_type &&
-                ["corporatie_waarschijnlijk", "particulier_of_corporatie"].includes(lead.eigenaar_type);
-              return (
-                <div className="flex items-start gap-2 text-xs">
-                  <User className="h-3.5 w-3.5 mt-0.5 text-muted-foreground shrink-0" />
-                  <div className="space-y-0.5">
-                    {naam ? (
-                      <span className="font-medium block">{naam}</span>
-                    ) : (
-                      <span className="text-muted-foreground">Onbekend</span>
-                    )}
-                    {lead.eigenaar_type && lead.eigenaar_type !== "onbekend" && (
-                      <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">
-                        {eigenaarTypeLabel(lead.eigenaar_type)}
-                      </span>
-                    )}
-                    {isProbabilistic && (
-                      <p className="text-[10px] text-muted-foreground italic">Waarschijnlijke corporatie — gebaseerd op gemeente + bouwjaar</p>
-                    )}
-                  </div>
-                </div>
-              );
-            })()}
+            <div className="flex items-start gap-2">
+              <User className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0" />
+              <div className="space-y-0.5 min-w-0">
+                {eigenaarNaam ? (
+                  <span className="text-sm font-medium block">{eigenaarNaam}</span>
+                ) : (
+                  <span className="text-sm text-muted-foreground">Eigenaar onbekend</span>
+                )}
+                {lead.eigenaar_type && lead.eigenaar_type !== "onbekend" && (
+                  <span className="text-xs px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">
+                    {eigenaarTypeLabel(lead.eigenaar_type)}
+                  </span>
+                )}
+              </div>
+            </div>
 
-            {/* Directe contactinfo (corporaties) */}
-            {(lead.contact_telefoon || lead.contact_website || lead.contact_email) && (
-              <div className="rounded-md bg-muted/40 px-2.5 py-2 space-y-1.5">
+            {hasContactInfo && (
+              <div className="rounded-lg bg-muted/50 px-3 py-2.5 space-y-2.5">
                 {lead.contact_telefoon && (
                   <a
                     href={`tel:${lead.contact_telefoon.replace(/\s/g, "")}`}
-                    className="flex items-center gap-2 text-xs hover:text-foreground text-muted-foreground"
+                    className="flex items-center gap-2 text-sm font-medium text-foreground hover:text-accent transition-colors"
                   >
-                    <Phone className="h-3 w-3 shrink-0" />
+                    <Phone className="h-4 w-4 shrink-0 text-accent" />
                     {lead.contact_telefoon}
                   </a>
                 )}
@@ -260,46 +197,43 @@ export function LeadDetailPanel({ leadId, onClose }: LeadDetailPanelProps) {
                     href={lead.contact_website}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-2 text-xs text-accent hover:underline truncate"
+                    className="flex items-center gap-2 text-sm text-accent hover:underline truncate"
                   >
-                    <Globe className="h-3 w-3 shrink-0" />
+                    <Globe className="h-4 w-4 shrink-0" />
                     {lead.contact_website.replace(/^https?:\/\//, "")}
                   </a>
                 )}
                 {lead.contact_email && (
                   <a
                     href={`mailto:${lead.contact_email}`}
-                    className="flex items-center gap-2 text-xs text-accent hover:underline"
+                    className="flex items-center gap-2 text-sm text-accent hover:underline"
                   >
-                    <ExternalLink className="h-3 w-3 shrink-0" />
+                    <ExternalLink className="h-4 w-4 shrink-0" />
                     {lead.contact_email}
                   </a>
                 )}
               </div>
             )}
 
-            {/* Actielinks: eigenaar zelf opzoeken */}
-            {lead.adres && (
-              <div className="space-y-1.5">
-                <p className="text-[10px] text-muted-foreground">Eigenaar opzoeken:</p>
-
-                {/* Pand-ID kopieerbaar tonen voor gebruik op kadaster.nl */}
-                {lead.bag_pand_id && (
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-[10px] text-muted-foreground">Pand-ID:</span>
-                    <button
-                      onClick={() => navigator.clipboard.writeText(lead.bag_pand_id!)}
-                      title="Kopieer pand-ID — plak op kadaster.nl/perceel-informatie voor eigenaarsinformatie"
-                      className="font-mono text-[10px] bg-muted px-1.5 py-0.5 rounded hover:bg-muted/80 transition-colors"
-                    >
-                      {lead.bag_pand_id}
-                    </button>
-                  </div>
-                )}
-
-                <div className="flex flex-wrap gap-1.5">
+            {/* Eigenaar opzoeken */}
+            <div className="space-y-1.5">
+              {!hasContactInfo && (
+                <p className="text-[10px] text-muted-foreground">Zelf eigenaar opzoeken:</p>
+              )}
+              {lead.bag_pand_id && (
+                <button
+                  onClick={() => navigator.clipboard.writeText(lead.bag_pand_id!)}
+                  title="Kopieer pand-ID voor kadaster.nl"
+                  className="flex items-center gap-1.5 text-[10px] text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <Building2 className="h-3 w-3" />
+                  <span className="font-mono">{lead.bag_pand_id}</span>
+                </button>
+              )}
+              <div className="flex flex-wrap gap-1.5">
+                {lead.adres && (
                   <a
-                    href={`https://www.google.com/search?q=${encodeURIComponent(`eigenaar ${lead.adres}`)}`}
+                    href={`https://www.google.com/search?q=${encodeURIComponent(`eigenaar ${lead.adres} ${lead.gemeente}`)}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-1 rounded-full border border-border px-2 py-0.5 text-[10px] text-muted-foreground hover:border-foreground hover:text-foreground transition-colors"
@@ -307,107 +241,94 @@ export function LeadDetailPanel({ leadId, onClose }: LeadDetailPanelProps) {
                     <Search className="h-2.5 w-2.5" />
                     Google
                   </a>
-                  {lead.longitude && lead.latitude && (
-                    <a
-                      href={`https://www.google.com/maps?q=${lead.latitude},${lead.longitude}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 rounded-full border border-border px-2 py-0.5 text-[10px] text-muted-foreground hover:border-foreground hover:text-foreground transition-colors"
-                    >
-                      <ExternalLink className="h-2.5 w-2.5" />
-                      Maps
-                    </a>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Sloopindicatoren */}
-          {lead.materiaal_volume_estimate && (lead.materiaal_volume_estimate as SloopIndicatoren).totaal_ton > 0 && (
-            <div className="space-y-2 border-t border-border pt-4">
-              <div className="flex items-center gap-1.5">
-                <Package className="h-3.5 w-3.5 text-muted-foreground" />
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                  Sloopindicatoren
-                </p>
-              </div>
-              <div className="grid grid-cols-2 gap-1.5">
-                {(() => {
-                  const ind = lead.materiaal_volume_estimate as SloopIndicatoren;
-                  const items: { label: string; value: string; sub?: string }[] = [];
-
-                  if (ind.totaal_ton) {
-                    items.push({
-                      label: "Sloopvolume",
-                      value: `${ind.totaal_ton.toLocaleString("nl-NL")} ton`,
-                    });
-                  }
-                  if (ind.residuwaarde_eur) {
-                    items.push({
-                      label: "Residuwaarde",
-                      value: `€ ${ind.residuwaarde_eur.toLocaleString("nl-NL")}`,
-                      sub: "schrootwaarde metaal",
-                    });
-                  }
-                  if (ind.asbest_m2 != null) {
-                    items.push({
-                      label: "Asbestverdacht",
-                      value: ind.asbest_m2 === 0 ? "Geen" : `${ind.asbest_m2.toLocaleString("nl-NL")} m²`,
-                    });
-                  }
-                  if (ind.sloopkosten_min && ind.sloopkosten_max) {
-                    items.push({
-                      label: "Sloopkosten",
-                      value: `€ ${(ind.sloopkosten_min / 1000).toFixed(0)}k – ${(ind.sloopkosten_max / 1000).toFixed(0)}k`,
-                      sub: "excl. asbestsanering",
-                    });
-                  }
-
-                  return items.map(({ label, value, sub }) => (
-                    <div key={label} className="rounded bg-muted/50 px-2 py-1.5 text-xs">
-                      <div className="text-muted-foreground">{label}</div>
-                      <div className="font-medium tabular-nums">{value}</div>
-                      {sub && <div className="text-[10px] text-muted-foreground/70 mt-0.5">{sub}</div>}
-                    </div>
-                  ));
-                })()}
+                )}
+                {lead.longitude && lead.latitude && (
+                  <a
+                    href={`https://www.google.com/maps?q=${lead.latitude},${lead.longitude}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 rounded-full border border-border px-2 py-0.5 text-[10px] text-muted-foreground hover:border-foreground hover:text-foreground transition-colors"
+                  >
+                    <MapPin className="h-2.5 w-2.5" />
+                    Maps
+                  </a>
+                )}
+                {lead.bag_pand_id && (
+                  <a
+                    href={`https://www.kadaster.nl/perceel-informatie?pandidentificatie=${lead.bag_pand_id}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 rounded-full border border-border px-2 py-0.5 text-[10px] text-muted-foreground hover:border-foreground hover:text-foreground transition-colors"
+                  >
+                    <ExternalLink className="h-2.5 w-2.5" />
+                    Kadaster
+                  </a>
+                )}
               </div>
             </div>
-          )}
+          </div>
+
+          {/* Pand */}
+          <div className="space-y-2 border-t border-border pt-4">
+            <p className="text-[11px] font-semibold text-muted-foreground">Pand</p>
+            <dl className="space-y-1.5">
+              <Row icon={<Calendar className="h-3.5 w-3.5" />} label="Bouwjaar" value={lead.bouwjaar?.toString() ?? "—"} />
+              <Row icon={<Ruler className="h-3.5 w-3.5" />} label="Oppervlakte" value={lead.oppervlakte_m2 != null ? `${lead.oppervlakte_m2.toLocaleString("nl-NL")} m²` : "—"} />
+              <Row icon={<Building2 className="h-3.5 w-3.5" />} label="Gebruik" value={lead.gebruiksdoel?.join(", ") ?? "—"} />
+            </dl>
+          </div>
+
+          {/* Publicatie */}
+          <div className="space-y-1.5 border-t border-border pt-4">
+            <div className="flex items-center justify-between">
+              <p className="text-[11px] font-semibold text-muted-foreground">Melding</p>
+              {lead.source_type && (
+                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">
+                  {lead.source_type === "eindhoven_vergunning" ? "Vergunning" :
+                   lead.source_type === "pijplijn" ? "Pijplijn" : "Sloopmelding"}
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {lead.publicatiedatum
+                ? new Date(lead.publicatiedatum).toLocaleDateString("nl-NL", { day: "numeric", month: "long", year: "numeric" })
+                : "—"}
+            </p>
+            {lead.titel && <p className="text-xs text-muted-foreground line-clamp-3">{lead.titel}</p>}
+            {lead.source_url && (
+              <a href={lead.source_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs text-accent hover:underline">
+                <ExternalLink className="h-3 w-3" />
+                Originele publicatie
+              </a>
+            )}
+          </div>
 
           {/* Pipeline signalen */}
           {signals.length > 0 && (
             <div className="space-y-2 border-t border-border pt-4">
               <div className="flex items-center gap-1.5">
                 <Radio className="h-3.5 w-3.5 text-accent" />
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                  Signalen ({signals.length})
+                <p className="text-[11px] font-semibold text-muted-foreground">
+                  Vroege signalen ({signals.length})
                 </p>
               </div>
               <div className="space-y-2">
                 {signals.map((sig) => (
                   <div key={sig.id} className="rounded-md bg-muted/50 px-2.5 py-2 space-y-0.5">
                     <div className="flex items-center justify-between gap-2">
-                      <span className="text-xs font-medium truncate">
-                        {signalTypeLabel(sig.signal_type)}
-                      </span>
+                      <span className="text-xs font-medium truncate">{signalTypeLabel(sig.signal_type)}</span>
                       <span className={`text-[10px] px-1.5 py-0.5 rounded-full shrink-0 ${
                         sig.signal_strength === "high"
                           ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
                           : "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
                       }`}>
-                        {sig.signal_strength}
+                        {sig.signal_strength === "high" ? "Sterk" : "Middel"}
                       </span>
                     </div>
                     <p className="text-[11px] text-muted-foreground">
                       {sig.source} · {new Date(sig.signal_time).toLocaleDateString("nl-NL")}
                     </p>
-                    {sig.title && (
-                      <p className="text-[11px] text-muted-foreground line-clamp-2">
-                        {sig.title}
-                      </p>
-                    )}
+                    {sig.title && <p className="text-[11px] text-muted-foreground line-clamp-2">{sig.title}</p>}
                   </div>
                 ))}
               </div>
@@ -419,18 +340,10 @@ export function LeadDetailPanel({ leadId, onClose }: LeadDetailPanelProps) {
   );
 }
 
-function Row({
-  icon,
-  label,
-  value,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: string;
-}) {
+function Row({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
   return (
-    <div className="flex items-start gap-2 text-xs">
-      <span className="mt-0.5 text-muted-foreground">{icon}</span>
+    <div className="flex items-start gap-2 text-sm">
+      <span className="mt-0.5 text-muted-foreground shrink-0">{icon}</span>
       <span className="text-muted-foreground w-24 shrink-0">{label}</span>
       <span className="font-medium">{value}</span>
     </div>

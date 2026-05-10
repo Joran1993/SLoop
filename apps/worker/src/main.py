@@ -35,6 +35,15 @@ def run_alert_notifications() -> None:
     log.info("Alert notificaties klaar: %s", result)
 
 
+@scheduler.scheduled_job("cron", hour=7, minute=30, id="koop_sloopvergunning")
+def run_koop_sloopvergunning() -> None:
+    from .sources.pipeline.koop_sloopvergunning_adapter import KoopSloopVergunningAdapter
+    from .pipelines.pipeline_runner import run_pipeline
+    log.info("Starten koop_sloopvergunning pipeline...")
+    result = run_pipeline(KoopSloopVergunningAdapter(), lookback_days=settings.pipeline_lookback_days)
+    log.info("koop_sloopvergunning klaar: %s", result)
+
+
 @scheduler.scheduled_job("cron", hour=8, minute=0, id="koop_voornemen")
 def run_koop_voornemen() -> None:
     from .sources.pipeline.koop_voornemen_adapter import KoopVoornemenAdapter
@@ -42,6 +51,15 @@ def run_koop_voornemen() -> None:
     log.info("Starten koop_voornemen pipeline...")
     result = run_pipeline(KoopVoornemenAdapter(), lookback_days=settings.pipeline_lookback_days)
     log.info("koop_voornemen klaar: %s", result)
+
+
+@scheduler.scheduled_job("cron", day_of_week="mon", hour=6, minute=0, id="prestatieafspraken")
+def run_prestatieafspraken() -> None:
+    from .sources.pipeline.koop_prestatieafspraken_adapter import KoopPrestatieafsprakenAdapter
+    from .pipelines.pipeline_runner import run_pipeline
+    log.info("Starten woningcorporatie prestatieafspraken pipeline...")
+    result = run_pipeline(KoopPrestatieafsprakenAdapter(), lookback_days=90)
+    log.info("prestatieafspraken klaar: %s", result)
 
 
 @scheduler.scheduled_job("cron", day_of_week="mon", hour=9, minute=0, id="ruimtelijkeplannen")

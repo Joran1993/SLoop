@@ -84,6 +84,7 @@ export interface Lead {
   bag_pand_id: string | null;
   source_url: string | null;
   source_type: string | null;
+  sort_tier: number | null;
   tender_window_estimate_weeks: number | null;
   signal_count: number | null;
   has_sloopvergunning: boolean | null;

@@ -1,4 +1,5 @@
 [build]
+  base = "apps/web"
   command = "pnpm run build"
   publish = ".next"
 

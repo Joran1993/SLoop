@@ -117,6 +117,7 @@ def run_pipeline(
         # Link signalen aan project
         if project_id:
             _link_signals(supabase, project_id, cluster, inserted_ids)
+            _enrich_bag(supabase, project_id, cluster.bag_pand_id)
 
         project_count += 1
 
@@ -266,6 +267,29 @@ def _load_existing_signals(supabase: Client, source: str) -> list[ParsedSignal]:
     except Exception as exc:
         log.warning("Kon bestaande signalen niet laden: %s", exc)
         return []
+
+
+def _enrich_bag(supabase: Client, project_id: str, bag_pand_id: str | None) -> None:
+    """Verrijkt een project met BAG-data (bouwjaar, gebruiksdoelen) als die ontbreken."""
+    if not bag_pand_id:
+        return
+    try:
+        existing = supabase.table("pipeline_projects").select("bouwjaar").eq("id", project_id).single().execute()
+        if existing.data and existing.data.get("bouwjaar"):
+            return  # Al verrijkt
+        from ..sources.bag import get_pand
+        pand = get_pand(bag_pand_id)
+        if not pand:
+            return
+        update_data = {}
+        if pand.bouwjaar:
+            update_data["bouwjaar"] = pand.bouwjaar
+        if pand.gebruiksdoelen:
+            update_data["gebruiksdoelen"] = pand.gebruiksdoelen
+        if update_data:
+            supabase.table("pipeline_projects").update(update_data).eq("id", project_id).execute()
+    except Exception as exc:
+        log.debug("BAG verrijking mislukt voor %s: %s", bag_pand_id, exc)
 
 
 def _link_signals(supabase: Client, project_id: str, cluster: SignalCluster, inserted_ids: dict):

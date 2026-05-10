@@ -1,6 +1,6 @@
 "use client";
 
-import { Radio, ShieldCheck } from "lucide-react";
+import { Radio } from "lucide-react";
 import { useState, useEffect } from "react";
 import { type LeadFilters } from "@/lib/api";
 
@@ -182,43 +182,43 @@ export function FilterBar({ filters, onChange }: FilterBarProps) {
         </label>
       </div>
 
-      {/* Bron filter */}
-      <div className="flex flex-wrap items-center gap-1.5">
-        <span className="text-xs text-muted-foreground mr-1">Bron</span>
-        {[
-          { value: "koop_sloopmelding", label: "KOOP sloopmelding" },
-          { value: "eindhoven_vergunning", label: "Eindhoven vergunning" },
-        ].map(({ value, label }) => {
-          const active = filters.source_type === value;
-          return (
-            <button
-              key={value}
-              onClick={() => update({ source_type: active ? undefined : value })}
-              className={`rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors ${
-                active
-                  ? "bg-foreground text-background"
-                  : "border border-border text-muted-foreground hover:border-foreground hover:text-foreground"
-              }`}
-            >
-              {label}
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Signalen & vergunning filter */}
-      <div className="flex items-center gap-3">
+      {/* Signaal timing */}
+      <div className="flex items-center gap-1.5">
+        <span className="text-xs text-muted-foreground mr-1">Signaal</span>
         <button
-          onClick={() => update({ with_sloopvergunning: filters.with_sloopvergunning ? undefined : true })}
+          onClick={() => update({ source_type: filters.source_type === "eindhoven_vergunning" ? undefined : "eindhoven_vergunning" })}
           className={`flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors ${
-            filters.with_sloopvergunning
-              ? "bg-red-600 text-white"
+            filters.source_type === "eindhoven_vergunning"
+              ? "bg-emerald-600 text-white"
               : "border border-border text-muted-foreground hover:border-foreground hover:text-foreground"
           }`}
         >
-          <ShieldCheck className="h-3 w-3" />
-          Vergunning verleend
+          Vroeg
         </button>
+        <button
+          onClick={() => update({ source_type: filters.source_type === "pijplijn" ? undefined : "pijplijn" })}
+          className={`flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors ${
+            filters.source_type === "pijplijn"
+              ? "bg-blue-600 text-white"
+              : "border border-border text-muted-foreground hover:border-foreground hover:text-foreground"
+          }`}
+        >
+          Pijplijn
+        </button>
+        <button
+          onClick={() => update({ source_type: filters.source_type === "koop_sloopmelding" ? undefined : "koop_sloopmelding" })}
+          className={`flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors ${
+            filters.source_type === "koop_sloopmelding"
+              ? "bg-amber-600 text-white"
+              : "border border-border text-muted-foreground hover:border-foreground hover:text-foreground"
+          }`}
+        >
+          Laat
+        </button>
+      </div>
+
+      {/* Signalen filter */}
+      <div className="flex items-center gap-3">
         <button
           onClick={() => update({ with_signals: filters.with_signals ? undefined : true })}
           className={`flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors ${

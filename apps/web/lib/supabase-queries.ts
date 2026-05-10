@@ -13,10 +13,10 @@ export async function fetchLeads(
   const offset = filters.offset ?? 0;
 
   let q = supabase
-    .from("sloop_leads_api")
+    .from("pipeline_projects_api")
     .select("*", { count: "exact" })
-    .order("has_sloopvergunning", { ascending: false, nullsFirst: false })
-    .order("score_totaal", { ascending: false })
+    .order("sort_tier", { ascending: true })
+    .order("publicatiedatum", { ascending: false })
     .range(offset, offset + limit - 1);
 
   if (filters.min_score != null) q = q.gte("score_totaal", filters.min_score);
@@ -33,8 +33,7 @@ export async function fetchLeads(
     q = q.gte("publicatiedatum", filters.datum_van);
   if (filters.with_signals)
     q = q.gt("signal_count", 0);
-  if (filters.with_sloopvergunning)
-    q = q.eq("has_sloopvergunning", true);
+  // has_sloopvergunning not available in pipeline_projects_api
   if (filters.favorite_ids?.length)
     q = q.in("id", filters.favorite_ids);
   if (filters.gebruiksdoel)
@@ -56,7 +55,7 @@ export async function fetchLeads(
 export async function fetchLead(id: string): Promise<Lead> {
   const supabase = createClient();
   const { data, error } = await supabase
-    .from("sloop_leads_api")
+    .from("pipeline_projects_api")
     .select("*")
     .eq("id", id)
     .single();

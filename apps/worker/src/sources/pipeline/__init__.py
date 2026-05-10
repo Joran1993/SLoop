@@ -6,11 +6,14 @@ from .rvb_adapter import RvbAdapter
 from .kadaster_stub import KadasterAdapter
 from .ruimtelijkeplannen_adapter import RuimtelijkePlannenAdapter
 from .eindhoven_vergunning_adapter import EindhovenVergunningAdapter
+from .koop_sloopvergunning_adapter import KoopSloopVergunningAdapter
+from .koop_prestatieafspraken_adapter import KoopPrestatieafsprakenAdapter
 
 __all__ = [
     "PipelineSourceAdapter", "ParsedSignal", "RawSignal", "geojson_to_ewkt",
     "KoopSloopMeldingAdapter", "KoopVoornemenAdapter",
     "CommissieMerAdapter", "RvbAdapter",
     "KadasterAdapter", "RuimtelijkePlannenAdapter",
-    "EindhovenVergunningAdapter",
+    "EindhovenVergunningAdapter", "KoopSloopVergunningAdapter",
+    "KoopPrestatieafsprakenAdapter",
 ]
