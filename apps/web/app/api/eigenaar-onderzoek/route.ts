@@ -11,19 +11,19 @@ export async function POST(req: NextRequest) {
   }
 
   const locatie = [adres, postcode, gemeente].filter(Boolean).join(", ");
-  const gemeente = locatie.split(",").pop()?.trim() ?? "";
-  const straatHuisnummer = locatie.split(",")[0]?.trim() ?? locatie;
+  const gemeenteNaam = (gemeente ?? locatie.split(",").pop()?.trim() ?? "").trim();
+  const straatHuisnummer = adres?.trim() ?? locatie.split(",")[0]?.trim() ?? locatie;
 
   const prompt = `Bepaal wie de eigenaar is van: ${locatie}${bag_pand_id ? ` (BAG ID: ${bag_pand_id})` : ""}.
 
 Doorloop deze zoekvolgorde en stop zodra je een antwoord hebt:
 
-1. Zoek op: "${straatHuisnummer}" "${gemeente}" sloopvergunning — de aanvraag of vergunning vermeldt vaak de aanvrager/eigenaar bij naam.
-2. Zoek op: "${straatHuisnummer}" "${gemeente}" eigenaar corporatie — controleer of een woningcorporatie dit adres in haar portefeuille heeft.
-3. Zoek welke woningcorporaties actief zijn in ${gemeente || "deze gemeente"} (bijv. Acantus, Woonzorg, Lefier, Wonen Emmen, etc.) en zoek vervolgens "[corporatienaam] ${straatHuisnummer}".
-4. Zoek op: "${straatHuisnummer}" "${gemeente}" sloop renovatie nieuwbouw — nieuwsberichten, bewonersberichten of projectpagina's noemen dikwijls de opdrachtgever.
+1. Zoek op: "${straatHuisnummer}" "${gemeenteNaam}" sloopvergunning — de aanvraag of vergunning vermeldt vaak de aanvrager/eigenaar bij naam.
+2. Zoek op: "${straatHuisnummer}" "${gemeenteNaam}" eigenaar corporatie — controleer of een woningcorporatie dit adres in haar portefeuille heeft.
+3. Zoek welke woningcorporaties actief zijn in ${gemeenteNaam || "deze gemeente"} (bijv. Acantus, Woonzorg, Lefier, Wonen Emmen, etc.) en zoek vervolgens "[corporatienaam] ${straatHuisnummer}".
+4. Zoek op: "${straatHuisnummer}" "${gemeenteNaam}" sloop renovatie nieuwbouw — nieuwsberichten, bewonersberichten of projectpagina's noemen dikwijls de opdrachtgever.
 5. Zoek op: site:officielebekendmakingen.nl "${straatHuisnummer}" — de publicatietekst bevat soms de naam van de aanvrager.
-6. Zoek op: "${straatHuisnummer}" "${gemeente}" vastgoed bv nv stichting gemeente.
+6. Zoek op: "${straatHuisnummer}" "${gemeenteNaam}" vastgoed bv nv stichting gemeente.
 
 REGELS:
 - Geef nooit op na één mislukte zoekopdracht. Probeer alle stappen.
