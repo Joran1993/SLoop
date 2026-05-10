@@ -87,7 +87,7 @@ export default async function LandingPage() {
             <div className="hidden lg:block">
               <div className="relative h-[460px] overflow-hidden rounded-2xl shadow-[0_20px_60px_-12px_rgba(0,0,0,0.22)]">
                 <Image
-                  src="https://images.unsplash.com/photo-MqAiJPYEFrs?auto=format&fit=crop&w=900&q=80"
+                  src="https://images.unsplash.com/photo-1665737847143-3080d0a12972?auto=format&fit=crop&w=900&q=80"
                   alt="Sloopwerkzaamheden in Nederland"
                   fill
                   className="object-cover"
@@ -190,7 +190,7 @@ export default async function LandingPage() {
         <div className="mx-auto max-w-5xl">
           <div className="relative h-[220px] overflow-hidden rounded-2xl sm:h-[280px]">
             <Image
-              src="https://images.unsplash.com/photo-X9QCPAQEqSE?auto=format&fit=crop&w=1400&h=560&q=80"
+              src="https://images.unsplash.com/photo-1719047655247-39d1577bfee0?auto=format&fit=crop&w=1400&h=560&q=80"
               alt="Sloopkansen in Nederlandse woonwijken"
               fill
               className="object-cover"
