@@ -394,7 +394,7 @@ export default async function LandingPage() {
           <div className="flex flex-wrap items-center gap-6 text-[12px] text-black/40">
             <a href="mailto:hallo@sloopradar.nl" className="hover:text-black transition-colors">hallo@sloopradar.nl</a>
             <Link href="/login" className="hover:text-black transition-colors">Inloggen</Link>
-            <span>© 2026 Sloopradar · Gemaakt in Nederland</span>
+            <span>© 2026 Sloopradar · een product van CircuBouw · Gemaakt in Nederland</span>
           </div>
         </div>
       </footer>
