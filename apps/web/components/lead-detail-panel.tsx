@@ -4,10 +4,23 @@ import {
   X, Building2, Calendar, Ruler, Radio, User, ExternalLink,
   Phone, Globe, Search, Link2, Check, AlertTriangle, Clock, MapPin, Eye,
 } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, queryOptions } from "@tanstack/react-query";
 import { useState } from "react";
 import { leadQueryOptions, pipelineSignalsQueryOptions } from "@/lib/queries";
 import { signalTypeLabel, eigenaarTypeLabel } from "@/lib/signal-labels";
+
+const eigenaarLookupOptions = (bagPandId: string | null) =>
+  queryOptions({
+    queryKey: ["eigenaar-lookup", bagPandId],
+    queryFn: async () => {
+      if (!bagPandId) return null;
+      const res = await fetch(`/api/eigenaar-lookup?bag_pand_id=${encodeURIComponent(bagPandId)}`);
+      const json = await res.json();
+      return (json?.zin as string | null) ?? null;
+    },
+    enabled: !!bagPandId,
+    staleTime: 24 * 60 * 60 * 1000,
+  });
 
 interface LeadDetailPanelProps {
   leadId: string;
@@ -106,6 +119,10 @@ export function LeadDetailPanel({ leadId, onClose }: LeadDetailPanelProps) {
     lead?.eigenaar_naam ??
     lead?.contact_naam ?? null;
 
+  const { data: eigenaarZin, isLoading: lookupLoading } = useQuery(
+    eigenaarLookupOptions(!eigenaarNaam ? (lead?.bag_pand_id ?? null) : null)
+  );
+
   const hasContactInfo = !!(lead?.contact_telefoon || lead?.contact_website || lead?.contact_email);
   const gr = grootte(lead?.oppervlakte_m2);
 
@@ -171,7 +188,19 @@ export function LeadDetailPanel({ leadId, onClose }: LeadDetailPanelProps) {
                 {eigenaarNaam ? (
                   <span className="text-sm font-medium block">{eigenaarNaam}</span>
                 ) : (
-                  <span className="text-sm text-muted-foreground">Eigenaar onbekend</span>
+                  <div className="space-y-1">
+                    <span className="text-sm text-muted-foreground">Eigenaar onbekend</span>
+                    {lookupLoading && (
+                      <span className="block text-[11px] text-muted-foreground/60 animate-pulse">
+                        Eigendomsinformatie opzoeken…
+                      </span>
+                    )}
+                    {!lookupLoading && eigenaarZin && (
+                      <span className="block text-[11px] text-muted-foreground leading-snug">
+                        {eigenaarZin}
+                      </span>
+                    )}
+                  </div>
                 )}
                 {lead.eigenaar_type && lead.eigenaar_type !== "onbekend" && (
                   <span className="text-xs px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">
