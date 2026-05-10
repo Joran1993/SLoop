@@ -316,61 +316,131 @@ export default async function LandingPage() {
 
       {/* ─── PRICING ─────────────────────────────────────────────────── */}
       <section id="pricing" className="border-y border-black/[0.06] bg-black/[0.02] px-6 py-28">
-        <div className="mx-auto max-w-lg text-center">
-          <p className="mb-3 text-[11px] font-semibold uppercase tracking-widest text-black/30">Prijzen</p>
-          <h2 className="text-[40px] font-bold tracking-[-0.025em]">Één prijs.<br />Alles inbegrepen.</h2>
-          <p className="mt-4 text-[17px] leading-[1.6] text-black/50">
-            14 dagen gratis proberen. Daarna €149 per maand. Opzegbaar wanneer u wilt.
-          </p>
-
-          {/* Card */}
-          <div className="mt-12 rounded-3xl border border-black/[0.08] bg-white p-10 text-left shadow-[0_8px_40px_-8px_rgba(0,0,0,0.10)]">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-[11px] font-semibold uppercase tracking-widest text-black/35">Pro</p>
-                <div className="mt-2.5 flex items-baseline gap-2">
-                  <span className="text-[56px] font-bold leading-none tracking-[-0.03em]">€149</span>
-                  <span className="text-[15px] text-black/40">/ maand excl. btw</span>
-                </div>
-              </div>
-              <span className="mt-1 rounded-full bg-amber-100 px-3 py-1 text-[11px] font-semibold text-amber-700 ring-1 ring-inset ring-amber-200 shrink-0">
-                Meest gekozen
-              </span>
-            </div>
-
-            <div className="mt-8 space-y-3.5">
-              {[
-                "Alle sloopkansen in heel Nederland",
-                "Vroeg, Pijplijn én Laat tier",
-                "Contactgegevens eigenaar & corporatie",
-                "Onbeperkt leads exporteren (CSV)",
-                "Real-time e-mailmeldingen",
-                "Filter op regio, type pand en bouwjaar",
-                "Opzegbaar per maand",
-              ].map((f) => (
-                <div key={f} className="flex items-center gap-3 text-[14px]">
-                  <CheckCircle2 className="h-[17px] w-[17px] shrink-0 text-emerald-500" />
-                  {f}
-                </div>
-              ))}
-            </div>
-
-            <Link
-              href="/login"
-              className="mt-10 flex w-full items-center justify-center gap-2 rounded-full bg-black py-4 text-[15px] font-semibold text-white hover:bg-black/80 transition-colors"
-            >
-              14 dagen gratis proberen
-              <ArrowRight className="h-4 w-4" />
-            </Link>
-            <p className="mt-3.5 text-center text-[12px] text-black/35">
-              Geen creditcard vereist · Betalen via iDEAL · Opzegbaar per maand
+        <div className="mx-auto max-w-5xl">
+          <div className="mb-16 text-center">
+            <p className="mb-3 text-[11px] font-semibold uppercase tracking-widest text-black/30">Prijzen</p>
+            <h2 className="text-[40px] font-bold tracking-[-0.025em]">Kies uw schaal.</h2>
+            <p className="mt-4 text-[17px] leading-[1.6] text-black/50">
+              14 dagen gratis proberen. Geen creditcard vereist. Opzegbaar per maand.
             </p>
           </div>
 
-          <p className="mt-8 text-[13px] text-black/40">
-            Meerdere gebruikers of API-toegang nodig?{" "}
+          <div className="grid gap-5 sm:grid-cols-3">
+
+            {/* Starter */}
+            <div className="rounded-2xl border border-black/[0.08] bg-white p-8 shadow-sm">
+              <p className="text-[11px] font-semibold uppercase tracking-widest text-black/35">Starter</p>
+              <div className="mt-3 flex items-baseline gap-1.5">
+                <span className="text-[44px] font-bold leading-none tracking-[-0.03em]">€95</span>
+                <span className="text-[14px] text-black/40">/ mnd excl. btw</span>
+              </div>
+              <p className="mt-2 text-[13px] text-black/45">ZZP &amp; klein sloopbedrijf · 1 regio</p>
+
+              <div className="my-7 border-t border-black/[0.06]" />
+
+              <div className="space-y-3">
+                {[
+                  "Leads in 1 regio naar keuze",
+                  "Pijplijn &amp; Korte termijn tier",
+                  "Contactgegevens eigenaar",
+                  "E-mailmeldingen nieuwe leads",
+                  "Filter op type pand en bouwjaar",
+                ].map((f) => (
+                  <div key={f} className="flex items-start gap-2.5 text-[13px] text-black/60">
+                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
+                    <span dangerouslySetInnerHTML={{ __html: f }} />
+                  </div>
+                ))}
+              </div>
+
+              <Link
+                href="/login"
+                className="mt-8 flex w-full items-center justify-center gap-2 rounded-full border border-black/[0.12] py-3 text-[14px] font-semibold text-black hover:bg-black/[0.04] transition-colors"
+              >
+                Gratis proberen
+              </Link>
+            </div>
+
+            {/* Pro — highlighted */}
+            <div className="relative rounded-2xl border border-black bg-black p-8 shadow-[0_12px_40px_-8px_rgba(0,0,0,0.30)] text-white">
+              <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-amber-400 px-3 py-0.5 text-[10px] font-bold uppercase tracking-wider text-black">
+                Meest gekozen
+              </span>
+              <p className="text-[11px] font-semibold uppercase tracking-widest text-white/40">Pro</p>
+              <div className="mt-3 flex items-baseline gap-1.5">
+                <span className="text-[44px] font-bold leading-none tracking-[-0.03em]">€245</span>
+                <span className="text-[14px] text-white/40">/ mnd excl. btw</span>
+              </div>
+              <p className="mt-2 text-[13px] text-white/50">Middelgroot bedrijf · meerdere regio&apos;s</p>
+
+              <div className="my-7 border-t border-white/[0.1]" />
+
+              <div className="space-y-3">
+                {[
+                  "Leads in heel Nederland",
+                  "Vroeg, Pijplijn &amp; Korte termijn tier",
+                  "Contactgegevens eigenaar &amp; corporatie",
+                  "Onbeperkt exporteren (CSV)",
+                  "Real-time e-mailmeldingen",
+                  "Filter op regio, type pand en bouwjaar",
+                ].map((f) => (
+                  <div key={f} className="flex items-start gap-2.5 text-[13px] text-white/70">
+                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" />
+                    <span dangerouslySetInnerHTML={{ __html: f }} />
+                  </div>
+                ))}
+              </div>
+
+              <Link
+                href="/login"
+                className="mt-8 flex w-full items-center justify-center gap-2 rounded-full bg-white py-3 text-[14px] font-semibold text-black hover:bg-white/90 transition-colors"
+              >
+                Gratis proberen
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            </div>
+
+            {/* Premium */}
+            <div className="rounded-2xl border border-black/[0.08] bg-white p-8 shadow-sm">
+              <p className="text-[11px] font-semibold uppercase tracking-widest text-black/35">Premium</p>
+              <div className="mt-3 flex items-baseline gap-1.5">
+                <span className="text-[44px] font-bold leading-none tracking-[-0.03em]">€595</span>
+                <span className="text-[14px] text-black/40">/ mnd excl. btw</span>
+              </div>
+              <p className="mt-2 text-[13px] text-black/45">Groot bedrijf · alle signalen</p>
+
+              <div className="my-7 border-t border-black/[0.06]" />
+
+              <div className="space-y-3">
+                {[
+                  "Alles uit Pro",
+                  "Voorsignaal — aanvraagfase (vroegst)",
+                  "Meerdere gebruikers",
+                  "API-toegang",
+                  "Prioriteit support",
+                  "Maatwerk rapportages",
+                ].map((f) => (
+                  <div key={f} className="flex items-start gap-2.5 text-[13px] text-black/60">
+                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
+                    {f}
+                  </div>
+                ))}
+              </div>
+
+              <Link
+                href="/login"
+                className="mt-8 flex w-full items-center justify-center gap-2 rounded-full border border-black/[0.12] py-3 text-[14px] font-semibold text-black hover:bg-black/[0.04] transition-colors"
+              >
+                Gratis proberen
+              </Link>
+            </div>
+
+          </div>
+
+          <p className="mt-8 text-center text-[13px] text-black/40">
+            Geen creditcard vereist · Betalen via iDEAL · Opzegbaar per maand ·{" "}
             <a href="mailto:hallo@sloopradar.nl" className="text-black underline-offset-2 hover:underline">
-              Neem contact op voor Enterprise
+              Contact voor Enterprise
             </a>
           </p>
         </div>
