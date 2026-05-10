@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Building2, Clock, Eye, AlertTriangle, CheckCircle2, ArrowRight, ChevronRight } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
+import { WerkgebiedPreview } from "@/components/werkgebied-preview";
 
 async function getPublicStats() {
   try {
@@ -17,12 +18,6 @@ async function getPublicStats() {
   }
 }
 
-const EXAMPLE_LEADS = [
-  { adres: "Stuwstraat 2 t/m 72",         gemeente: "'s-Gravenhage", tier: "vroeg"    as const, oppervlakte: "4.200 m²", timing: "3 weken geleden",   eigenaar: "Staedion" },
-  { adres: "Zeesluisweg 44 t/m 76",        gemeente: "'s-Gravenhage", tier: "pijplijn" as const, oppervlakte: "2.100 m²", timing: "2 mnd geleden",     eigenaar: "Vestia" },
-  { adres: "Buitenruststraat 1-43",        gemeente: "Middelburg",    tier: "pijplijn" as const, oppervlakte: "3.500 m²", timing: "4 mnd geleden",     eigenaar: "Onbekend" },
-  { adres: "Lichtenbergweg 29 t/m 111",   gemeente: "Maastricht",    tier: "laat"     as const, oppervlakte: "6.800 m²", timing: "5 weken geleden",   eigenaar: "Woonpunt" },
-];
 
 export default async function LandingPage() {
   const stats = await getPublicStats();
@@ -82,7 +77,7 @@ export default async function LandingPage() {
               href="#preview"
               className="inline-flex items-center gap-1.5 rounded-full border border-black/[0.1] px-6 py-3.5 text-[15px] font-medium text-black/60 hover:text-black hover:border-black/20 transition-colors"
             >
-              Voorbeeldleads bekijken
+              Bekijk uw werkgebied
               <ChevronRight className="h-4 w-4" />
             </Link>
           </div>
@@ -119,93 +114,17 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      {/* ─── PRODUCT PREVIEW ─────────────────────────────────────────── */}
+      {/* ─── WERKGEBIED PREVIEW ───────────────────────────────────────── */}
       <section id="preview" className="px-6 py-28">
-        <div className="mx-auto max-w-5xl">
-          <div className="mb-14 text-center">
-            <p className="mb-3 text-[11px] font-semibold uppercase tracking-widest text-black/30">Het dashboard</p>
-            <h2 className="text-[40px] font-bold tracking-[-0.025em]">Uw leads, direct inzichtelijk</h2>
+        <div className="mx-auto max-w-2xl">
+          <div className="mb-10 text-center">
+            <p className="mb-3 text-[11px] font-semibold uppercase tracking-widest text-black/30">Uw werkgebied</p>
+            <h2 className="text-[40px] font-bold tracking-[-0.025em]">Bekijk uw regio</h2>
+            <p className="mx-auto mt-3 max-w-sm text-[16px] leading-[1.6] text-black/45">
+              Vul uw postcode of plaats in en zie direct hoeveel sloopkansen er nu in uw werkgebied staan.
+            </p>
           </div>
-
-          {/* Fake app window */}
-          <div className="overflow-hidden rounded-2xl border border-black/[0.08] bg-white shadow-[0_24px_64px_-12px_rgba(0,0,0,0.14)]">
-
-            {/* Browser chrome */}
-            <div className="flex items-center gap-5 border-b border-black/[0.06] bg-black/[0.02] px-5 py-3.5">
-              <div className="flex items-center gap-1.5 shrink-0">
-                <span className="h-3 w-3 rounded-full bg-[#FF5F57]" />
-                <span className="h-3 w-3 rounded-full bg-[#FEBC2E]" />
-                <span className="h-3 w-3 rounded-full bg-[#28C840]" />
-              </div>
-              <div className="flex h-6 flex-1 max-w-xs items-center rounded-md border border-black/[0.07] bg-white px-3 text-[11px] text-black/35 font-mono">
-                app.sloopradar.nl/dashboard
-              </div>
-            </div>
-
-            {/* Topbar */}
-            <div className="flex items-center justify-between border-b border-black/[0.06] px-5 py-3">
-              <span className="text-[13px] font-semibold">
-                {stats.totaal.toLocaleString("nl-NL")}&thinsp;
-                <span className="font-normal text-black/40">leads</span>
-              </span>
-              <div className="flex items-center gap-1.5">
-                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 ring-1 ring-inset ring-emerald-200">
-                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />{stats.vroeg} vroeg
-                </span>
-                <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-semibold text-blue-700 ring-1 ring-inset ring-blue-200">
-                  <span className="h-1.5 w-1.5 rounded-full bg-blue-500" />{stats.pijplijn} pijplijn
-                </span>
-              </div>
-            </div>
-
-            {/* Table */}
-            <div className="overflow-x-auto">
-              {/* Header */}
-              <div className="flex items-center gap-4 border-b border-black/[0.06] bg-black/[0.015] px-5 py-2.5">
-                <span className="w-[88px] shrink-0 text-[10px] font-semibold uppercase tracking-wider text-black/35" />
-                <span className="min-w-0 flex-1 text-[10px] font-semibold uppercase tracking-wider text-black/35">Adres</span>
-                <span className="w-[130px] shrink-0 text-[10px] font-semibold uppercase tracking-wider text-black/35">Gemeente</span>
-                <span className="w-[80px] shrink-0 text-[10px] font-semibold uppercase tracking-wider text-black/35">Opp.</span>
-                <span className="w-[100px] shrink-0 text-[10px] font-semibold uppercase tracking-wider text-black/35">Signaal</span>
-                <span className="w-[100px] shrink-0 text-[10px] font-semibold uppercase tracking-wider text-black/35">Eigenaar</span>
-              </div>
-
-              {EXAMPLE_LEADS.map((lead, i) => (
-                <div
-                  key={i}
-                  className={`flex items-center gap-4 border-b border-black/[0.04] px-5 py-3.5 last:border-0 ${i === 0 ? "bg-amber-50/50" : ""}`}
-                >
-                  {/* Tier */}
-                  <div className="w-[88px] shrink-0">
-                    {lead.tier === "vroeg" ? (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 ring-1 ring-inset ring-emerald-200">
-                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 shrink-0" />Vroeg
-                      </span>
-                    ) : lead.tier === "pijplijn" ? (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-semibold text-blue-700 ring-1 ring-inset ring-blue-200">
-                        <span className="h-1.5 w-1.5 rounded-full bg-blue-500 shrink-0" />Pijplijn
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-stone-100 px-2 py-0.5 text-[10px] font-semibold text-stone-600 ring-1 ring-inset ring-stone-200">
-                        <span className="h-1.5 w-1.5 rounded-full bg-stone-400 shrink-0" />Laat
-                      </span>
-                    )}
-                  </div>
-                  <span className="min-w-0 flex-1 truncate text-[13px] font-medium">{lead.adres}</span>
-                  <span className="w-[130px] shrink-0 text-[13px] text-black/45">{lead.gemeente}</span>
-                  <span className="w-[80px] shrink-0 text-[13px] tabular-nums text-black/45">{lead.oppervlakte}</span>
-                  <span className="w-[100px] shrink-0 text-[13px] text-black/45">{lead.timing}</span>
-                  <span className="w-[100px] shrink-0 text-[13px] text-black/45">{lead.eigenaar}</span>
-                </div>
-              ))}
-
-              <div className="border-t border-black/[0.04] bg-black/[0.015] px-5 py-3 text-center">
-                <span className="text-[12px] text-black/35">
-                  + {(stats.totaal - 4).toLocaleString("nl-NL")} leads zichtbaar na aanmelden
-                </span>
-              </div>
-            </div>
-          </div>
+          <WerkgebiedPreview />
         </div>
       </section>
 
