@@ -110,7 +110,7 @@ export default async function LandingPage() {
               <div className="text-[52px] font-bold leading-none tabular-nums tracking-tight text-blue-600">
                 {stats.pijplijn}
               </div>
-              <div className="mt-2.5 text-[13px] text-black/45">pijplijn — in behandeling</div>
+              <div className="mt-2.5 text-[13px] text-black/45">pijplijn — vergunning verleend</div>
             </div>
           </div>
           <p className="mt-8 text-center text-[11px] font-medium uppercase tracking-widest text-black/25">
@@ -251,8 +251,8 @@ export default async function LandingPage() {
           <div className="mb-16 text-center">
             <p className="mb-3 text-[11px] font-semibold uppercase tracking-widest text-black/30">Timing is alles</p>
             <h2 className="text-[40px] font-bold tracking-[-0.025em]">Drie fases. Één voorsprong.</h2>
-            <p className="mx-auto mt-4 max-w-md text-[17px] leading-[1.6] text-black/50">
-              Elke lead heeft een timing-label zodat u meteen weet of u vandaag moet bellen of het voor volgend kwartaal kunt plannen.
+            <p className="mx-auto mt-4 max-w-[520px] text-[17px] leading-[1.6] text-black/50">
+              Elke lead krijgt een timing-label op basis van publicatiedatum en type bekendmaking — zodat u weet of u vandaag moet bellen of het voor volgend kwartaal kunt plannen.
             </p>
           </div>
 
@@ -265,13 +265,13 @@ export default async function LandingPage() {
                   Vroeg signaal
                 </span>
               </div>
-              <h3 className="text-[18px] font-semibold tracking-tight">Aanvraagfase —<br />u bent de eerste</h3>
+              <h3 className="text-[18px] font-semibold tracking-tight">Vergunningfase —<br />voor de markt uit</h3>
               <p className="mt-3 text-[14px] leading-[1.65] text-black/50">
-                De sloopvergunning is aangevraagd maar nog niet verleend. De eigenaar heeft nog géén sloopbedrijf gekozen. Wie nu belt, is de eerste.
+                Sloopvergunning aangevraagd voor een monument of pand in beschermd gebied. De procedure loopt nog. De eigenaar oriënteert zich en heeft zelden al een sloopbedrijf in beeld.
               </p>
               <div className="mt-6 flex items-center gap-2 rounded-xl bg-emerald-50 px-4 py-3">
                 <Clock className="h-4 w-4 text-emerald-600 shrink-0" />
-                <span className="text-[13px] font-semibold text-emerald-800">3 – 12 maanden tot sloop</span>
+                <span className="text-[13px] font-semibold text-emerald-800">4 – 12 maanden tot sloop</span>
               </div>
             </div>
 
@@ -283,31 +283,31 @@ export default async function LandingPage() {
                   Pijplijn
                 </span>
               </div>
-              <h3 className="text-[18px] font-semibold tracking-tight">Selectiefase —<br />nog op tijd</h3>
+              <h3 className="text-[18px] font-semibold tracking-tight">Vergunning verleend —<br />fase van offertes</h3>
               <p className="mt-3 text-[14px] leading-[1.65] text-black/50">
-                Vergunning aangevraagd, 5 weken tot 6 maanden geleden. Nog niet verleend. De eigenaar begint binnenkort sloopbedrijven te vergelijken.
+                Sloopvergunning verleend (monument of beschermd gebied). De eigenaar gaat nu sloopbedrijven vergelijken. Wie deze week belt, zit in de eerste ronde offertes.
               </p>
               <div className="mt-6 flex items-center gap-2 rounded-xl bg-blue-50 px-4 py-3">
                 <Eye className="h-4 w-4 text-blue-600 shrink-0" />
-                <span className="text-[13px] font-semibold text-blue-800">2 – 9 maanden tot sloop</span>
+                <span className="text-[13px] font-semibold text-blue-800">1 – 6 maanden tot sloop</span>
               </div>
             </div>
 
-            {/* Laat */}
-            <div className="rounded-2xl border border-black/[0.08] bg-white p-8 shadow-sm">
+            {/* Korte termijn */}
+            <div className="rounded-2xl border border-amber-200/80 bg-white p-8 shadow-sm">
               <div className="mb-6">
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-stone-100 px-3 py-1 text-[11px] font-semibold text-stone-600 ring-1 ring-inset ring-stone-200">
-                  <span className="h-1.5 w-1.5 rounded-full bg-stone-400" />
-                  Laat signaal
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-3 py-1 text-[11px] font-semibold text-amber-700 ring-1 ring-inset ring-amber-200">
+                  <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+                  Korte termijn
                 </span>
               </div>
-              <h3 className="text-[18px] font-semibold tracking-tight">Vergunningsfase —<br />snel handelen</h3>
+              <h3 className="text-[18px] font-semibold tracking-tight">Sloopmelding ingediend —<br />werk staat ingepland</h3>
               <p className="mt-3 text-[14px] leading-[1.65] text-black/50">
-                Vergunning verleend of sloopmelding ingediend. De eigenaar vraagt waarschijnlijk al offertes op. Snel reageren loont nog steeds.
+                Reguliere sloop mag wettelijk pas 4 weken na melding starten. Bij particulieren en MKB is op dit moment nog niet altijd een definitieve sloper gekozen. Direct contact loont.
               </p>
-              <div className="mt-6 flex items-center gap-2 rounded-xl bg-stone-50 px-4 py-3">
-                <AlertTriangle className="h-4 w-4 text-stone-500 shrink-0" />
-                <span className="text-[13px] font-semibold text-stone-700">0 – 6 maanden tot sloop</span>
+              <div className="mt-6 flex items-center gap-2 rounded-xl bg-amber-50 px-4 py-3">
+                <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0" />
+                <span className="text-[13px] font-semibold text-amber-800">4 – 12 weken tot sloop</span>
               </div>
             </div>
           </div>

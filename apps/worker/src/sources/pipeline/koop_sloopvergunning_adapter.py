@@ -40,6 +40,39 @@ _POLYGON_FIRST_RE = re.compile(r"POLYGON\s*\(\s*\(\s*([\d.]+)\s+([\d.]+)", re.IG
 _PAGE_SIZE = 100
 _MAX_RECORDS = 2000
 
+_PDOK_LOCATIE_URL = "https://api.pdok.nl/bzk/locatieserver/search/v3_1/free"
+
+# Direct adrespatroon na "omgevingsvergunning" of "sloopvergunning"
+_OMGEV_ADRES_RE = re.compile(
+    r"(?:omgevingsvergunning|sloopvergunning)\s+(.+?),\s*(\d{4}\s?[A-Z]{2})",
+    re.IGNORECASE,
+)
+
+
+def _geocode_pdok(address_text: str, gemeente: str | None) -> str | None:
+    """Geocodeer adres via PDOK Locatieserver (gratis) → bag_pand_id."""
+    if not address_text:
+        return None
+    q = address_text.split(",")[0].strip()
+    if gemeente:
+        q = f"{q} {gemeente}"
+    try:
+        with httpx.Client(timeout=6) as client:
+            resp = client.get(_PDOK_LOCATIE_URL, params={
+                "q": q,
+                "fq": "type:adres",
+                "rows": 1,
+                "fl": "pandidentificatie,weergavenaam",
+            })
+            if resp.status_code != 200:
+                return None
+            docs = resp.json().get("response", {}).get("docs", [])
+            if docs:
+                return docs[0].get("pandidentificatie") or None
+    except Exception:
+        pass
+    return None
+
 
 def _parse_rd_geometry(geom_str: str | None) -> str | None:
     """Haal EWKT POINT uit een KOOP geometrie-string (RD New / EPSG:28992)."""
@@ -62,6 +95,13 @@ _STREET_WORD_RE = re.compile(
 
 def _extract_address(title: str, gemeente: str | None) -> str | None:
     """Probeer adres te extraheren uit publicatietitel."""
+    # Primair: direct patroon "omgevingsvergunning/sloopvergunning <adres>, <postcode>"
+    m = _OMGEV_ADRES_RE.search(title)
+    if m:
+        adres = m.group(1).strip().rstrip(",")
+        postcode = m.group(2).replace(" ", "")
+        return f"{adres}, {postcode}{(' ' + gemeente) if gemeente else ''}"
+
     postcode_m = re.search(r"(\d{4}\s?[A-Z]{2})", title)
     if not postcode_m:
         return None
@@ -73,7 +113,6 @@ def _extract_address(title: str, gemeente: str | None) -> str | None:
     street_matches = list(_STREET_WORD_RE.finditer(before))
     if street_matches:
         last_street = street_matches[-1]
-        # Ga terug naar het begin van het straatfragment (woordgrens voor het straatwoord)
         fragment_start = before.rfind(" ", 0, last_street.start())
         adres = before[fragment_start + 1 if fragment_start >= 0 else 0:].strip()
     else:
@@ -215,8 +254,9 @@ class KoopSloopVergunningAdapter(PipelineSourceAdapter):
         # Geometrie (EPSG:28992)
         geometry_ewkt = _parse_rd_geometry(rec.get("geometrie"))
 
-        # Adres
+        # Adres + geocodeer naar bag_pand_id
         address_text = _extract_address(title, gemeente)
+        bag_pand_id = _geocode_pdok(address_text, gemeente) if address_text else None
 
         return ParsedSignal(
             source=self.source_name,
@@ -229,7 +269,7 @@ class KoopSloopVergunningAdapter(PipelineSourceAdapter):
             address_text=address_text,
             postcode=None,
             gemeente=gemeente,
-            bag_pand_id=None,
+            bag_pand_id=bag_pand_id,
             geometry_ewkt=geometry_ewkt,
             source_url=raw.source_url or f"https://zoek.officielebekendmakingen.nl/{raw.source_id}.html",
             raw_payload=rec,
