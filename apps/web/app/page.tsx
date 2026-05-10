@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { Building2, Clock, Eye, AlertTriangle, CheckCircle2, ArrowRight, ChevronRight } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { WerkgebiedPreview } from "@/components/werkgebied-preview";
@@ -44,44 +45,64 @@ export default async function LandingPage() {
       </header>
 
       {/* ─── HERO ────────────────────────────────────────────────────── */}
-      <section className="px-6 pt-24 pb-20 text-center">
-        <div className="mx-auto max-w-4xl">
+      <section className="px-6 pt-16 pb-12">
+        <div className="mx-auto max-w-6xl">
+          <div className="grid items-center gap-10 lg:grid-cols-2 lg:gap-16">
 
-          {/* Live badge */}
-          <div className="mb-8 inline-flex items-center gap-2 rounded-full border border-black/[0.08] bg-black/[0.03] px-3.5 py-1.5 text-[12px] font-medium text-black/50">
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-            {stats.vroeg} nieuwe sloopkansen deze week · live data
+            {/* Left: tekst */}
+            <div>
+              <div className="mb-7 inline-flex items-center gap-2 rounded-full border border-black/[0.08] bg-black/[0.03] px-3.5 py-1.5 text-[12px] font-medium text-black/50">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                {stats.vroeg} nieuwe sloopkansen deze week · live data
+              </div>
+
+              <h1 className="text-[clamp(36px,4.5vw,64px)] font-bold leading-[1.04] tracking-[-0.03em] text-black">
+                De aanvraag staat online.<br />
+                Uw concurrent weet het<br /> nog niet.
+              </h1>
+
+              <p className="mt-6 max-w-[440px] text-[18px] leading-[1.6] text-black/50">
+                Sloopradar monitort dagelijks alle Nederlandse gemeentebladen en levert nieuwe sloopkansen als lead — weken vóór de offertefase.
+              </p>
+
+              <div className="mt-8 flex flex-wrap items-center gap-4">
+                <Link
+                  href="/login"
+                  className="inline-flex items-center gap-2 rounded-full bg-black px-7 py-3.5 text-[15px] font-semibold text-white hover:bg-black/80 transition-colors"
+                >
+                  14 dagen gratis proberen
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+                <Link
+                  href="#preview"
+                  className="inline-flex items-center gap-1.5 rounded-full border border-black/[0.1] px-6 py-3.5 text-[15px] font-medium text-black/60 hover:text-black hover:border-black/20 transition-colors"
+                >
+                  Bekijk uw werkgebied
+                  <ChevronRight className="h-4 w-4" />
+                </Link>
+              </div>
+            </div>
+
+            {/* Right: foto */}
+            <div className="hidden lg:block">
+              <div className="relative h-[460px] overflow-hidden rounded-2xl shadow-[0_20px_60px_-12px_rgba(0,0,0,0.22)]">
+                <Image
+                  src="https://images.unsplash.com/photo-MqAiJPYEFrs?auto=format&fit=crop&w=900&q=80"
+                  alt="Sloopwerkzaamheden in Nederland"
+                  fill
+                  className="object-cover"
+                  priority
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-black/10 to-transparent" />
+                <div className="absolute bottom-5 left-5 right-5">
+                  <p className="text-[13px] font-medium text-white/80">
+                    Dagelijks nieuwe sloopkansen via officiële overheidsregistraties
+                  </p>
+                </div>
+              </div>
+            </div>
+
           </div>
-
-          {/* Headline */}
-          <h1 className="text-[clamp(40px,7vw,72px)] font-bold leading-[1.04] tracking-[-0.03em] text-black">
-            De aanvraag staat online.<br />
-            Uw concurrent weet het<br className="hidden sm:block" /> nog niet.
-          </h1>
-
-          {/* Sub */}
-          <p className="mx-auto mt-7 max-w-[480px] text-[18px] leading-[1.6] text-black/50">
-            Sloopradar monitort dagelijks alle Nederlandse gemeentebladen en levert nieuwe sloopkansen als lead — weken vóór de offertefase.
-          </p>
-
-          {/* CTAs */}
-          <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
-            <Link
-              href="/login"
-              className="inline-flex items-center gap-2 rounded-full bg-black px-7 py-3.5 text-[15px] font-semibold text-white hover:bg-black/80 transition-colors"
-            >
-              14 dagen gratis proberen
-              <ArrowRight className="h-4 w-4" />
-            </Link>
-            <Link
-              href="#preview"
-              className="inline-flex items-center gap-1.5 rounded-full border border-black/[0.1] px-6 py-3.5 text-[15px] font-medium text-black/60 hover:text-black hover:border-black/20 transition-colors"
-            >
-              Bekijk uw werkgebied
-              <ChevronRight className="h-4 w-4" />
-            </Link>
-          </div>
-
         </div>
       </section>
 
@@ -163,6 +184,29 @@ export default async function LandingPage() {
           </div>
         </div>
       </section>
+
+      {/* ─── FOTO STRIP ──────────────────────────────────────────────── */}
+      <div className="px-6 pb-8">
+        <div className="mx-auto max-w-5xl">
+          <div className="relative h-[220px] overflow-hidden rounded-2xl sm:h-[280px]">
+            <Image
+              src="https://images.unsplash.com/photo-X9QCPAQEqSE?auto=format&fit=crop&w=1400&h=560&q=80"
+              alt="Sloopkansen in Nederlandse woonwijken"
+              fill
+              className="object-cover"
+            />
+            <div className="absolute inset-0 bg-black/50" />
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-center px-6">
+              <p className="text-[22px] font-bold tracking-[-0.02em] text-white sm:text-[28px]">
+                {stats.totaal.toLocaleString("nl-NL")} panden in Nederland
+              </p>
+              <p className="text-[14px] text-white/65">
+                Gemonitord via officiële publicaties · dagelijks bijgewerkt
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* ─── THREE TIERS ─────────────────────────────────────────────── */}
       <section className="px-6 py-28">
