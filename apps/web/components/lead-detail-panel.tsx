@@ -106,6 +106,32 @@ export function LeadDetailPanel({ leadId, onClose }: LeadDetailPanelProps) {
     pipelineSignalsQueryOptions(lead?.bag_pand_id ?? null)
   );
   const [copied, setCopied] = useState(false);
+  const [onderzoekTekst, setOnderzoekTekst] = useState<string | null>(null);
+  const [onderzoekLoading, setOnderzoekLoading] = useState(false);
+
+  async function startOnderzoek() {
+    if (!lead || onderzoekLoading) return;
+    setOnderzoekLoading(true);
+    setOnderzoekTekst(null);
+    try {
+      const res = await fetch("/api/eigenaar-onderzoek", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          adres: lead.adres,
+          gemeente: lead.gemeente,
+          postcode: lead.postcode,
+          bag_pand_id: lead.bag_pand_id,
+        }),
+      });
+      const json = await res.json();
+      setOnderzoekTekst(json.tekst ?? json.error ?? "Geen resultaat gevonden.");
+    } catch {
+      setOnderzoekTekst("Zoeken mislukt. Probeer het opnieuw.");
+    } finally {
+      setOnderzoekLoading(false);
+    }
+  }
 
   function copyLink() {
     navigator.clipboard.writeText(`${window.location.origin}/leads/${leadId}`).then(() => {
@@ -188,7 +214,7 @@ export function LeadDetailPanel({ leadId, onClose }: LeadDetailPanelProps) {
                 {eigenaarNaam ? (
                   <span className="text-sm font-medium block">{eigenaarNaam}</span>
                 ) : (
-                  <div className="space-y-1">
+                  <div className="space-y-1.5">
                     <span className="text-sm text-muted-foreground">Eigenaar onbekend</span>
                     {lookupLoading && (
                       <span className="block text-[11px] text-muted-foreground/60 animate-pulse">
@@ -199,6 +225,38 @@ export function LeadDetailPanel({ leadId, onClose }: LeadDetailPanelProps) {
                       <span className="block text-[11px] text-muted-foreground leading-snug">
                         {eigenaarZin}
                       </span>
+                    )}
+                    {/* Dieper onderzoek */}
+                    {!onderzoekTekst && (
+                      <button
+                        onClick={startOnderzoek}
+                        disabled={onderzoekLoading}
+                        className="inline-flex items-center gap-1.5 rounded-full border border-border px-2.5 py-1 text-[11px] font-medium text-muted-foreground hover:border-foreground hover:text-foreground disabled:opacity-50 transition-colors"
+                      >
+                        {onderzoekLoading ? (
+                          <>
+                            <span className="h-2.5 w-2.5 animate-spin rounded-full border border-current border-t-transparent" />
+                            Aan het zoeken…
+                          </>
+                        ) : (
+                          <>
+                            <Search className="h-2.5 w-2.5" />
+                            Eigenaar opzoeken
+                          </>
+                        )}
+                      </button>
+                    )}
+                    {onderzoekTekst && (
+                      <div className="rounded-md bg-muted/60 px-2.5 py-2 space-y-1">
+                        <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">Gevonden via web</p>
+                        <p className="text-[11px] text-foreground leading-snug">{onderzoekTekst}</p>
+                        <button
+                          onClick={() => { setOnderzoekTekst(null); }}
+                          className="text-[10px] text-muted-foreground hover:text-foreground transition-colors"
+                        >
+                          Opnieuw zoeken
+                        </button>
+                      </div>
                     )}
                   </div>
                 )}
