@@ -11,29 +11,31 @@ export async function POST(req: NextRequest) {
   }
 
   const locatie = [adres, postcode, gemeente].filter(Boolean).join(", ");
-  const gemeenteNaam = (gemeente ?? locatie.split(",").pop()?.trim() ?? "").trim();
-  const straatHuisnummer = adres?.trim() ?? locatie.split(",")[0]?.trim() ?? locatie;
+  const gemeenteNaam = (gemeente ?? "").trim();
+  const straatHuisnummer = (adres ?? "").trim();
+  const pc = (postcode ?? "").trim();
 
-  const prompt = `Bepaal wie de eigenaar is van: ${locatie}${bag_pand_id ? ` (BAG ID: ${bag_pand_id})` : ""}.
+  const prompt = `Bepaal de eigenaar van: ${locatie}${bag_pand_id ? ` (BAG ID: ${bag_pand_id})` : ""}.
 
-Doorloop deze zoekvolgorde en stop zodra je een antwoord hebt:
+Gebruik deze zoekopdrachten exact zo, in volgorde:
+1. "${straatHuisnummer}" "${pc}" sloop
+2. "${straatHuisnummer}" site:${gemeenteNaam.toLowerCase().replace(/\s+/g, "")}.nl
+3. site:officielebekendmakingen.nl "${straatHuisnummer}" "${pc}"
+4. "${straatHuisnummer}" "${gemeenteNaam}" woningcorporatie
+5. Welke corporaties zijn actief in ${gemeenteNaam}? Zoek dan: [corporatienaam] "${pc}"
+6. "${straatHuisnummer}" "${gemeenteNaam}" vastgoed OR gemeente OR stichting
 
-1. Zoek op: "${straatHuisnummer}" "${gemeenteNaam}" sloopvergunning — de aanvraag of vergunning vermeldt vaak de aanvrager/eigenaar bij naam.
-2. Zoek op: "${straatHuisnummer}" "${gemeenteNaam}" eigenaar corporatie — controleer of een woningcorporatie dit adres in haar portefeuille heeft.
-3. Zoek welke woningcorporaties actief zijn in ${gemeenteNaam || "deze gemeente"} (bijv. Acantus, Woonzorg, Lefier, Wonen Emmen, etc.) en zoek vervolgens "[corporatienaam] ${straatHuisnummer}".
-4. Zoek op: "${straatHuisnummer}" "${gemeenteNaam}" sloop renovatie nieuwbouw — nieuwsberichten, bewonersberichten of projectpagina's noemen dikwijls de opdrachtgever.
-5. Zoek op: site:officielebekendmakingen.nl "${straatHuisnummer}" — de publicatietekst bevat soms de naam van de aanvrager.
-6. Zoek op: "${straatHuisnummer}" "${gemeenteNaam}" vastgoed bv nv stichting gemeente.
-
-REGELS:
-- Geef nooit op na één mislukte zoekopdracht. Probeer alle stappen.
-- Als het een gewoon woonhuis van een particulier blijkt: stuur ALLEEN "WOONHUIS" terug.
-- Anders: maximaal 2 zinnen. Noem de eigenaar bij naam als je die vindt. Zeg wat je bron was (bijv. "Uit de sloopvergunningaanvraag" of "Acantus beheert dit complex"). Begin direct met de inhoud.`;
+OUTPUT-REGELS (strikt):
+- Particulier woonhuis → antwoord uitsluitend: WOONHUIS
+- Eigenaar gevonden → maximaal 1 zin. Noem naam + bron. Geen inleiding.
+- Niet gevonden maar redelijke gok mogelijk → maximaal 1 zin met "vermoedelijk" + onderbouwing.
+- Echt niets → maximaal 1 zin: wat je WEL weet (bijv. welk type pand, welke corporaties actief zijn).
+- Geef NOOIT een uitgebreide verontschuldiging of lijst met suggesties.`;
 
   try {
     const response = await client.messages.create({
       model: "claude-haiku-4-5-20251001",
-      max_tokens: 300,
+      max_tokens: 150,
       tools: [
         {
           type: "web_search_20250305" as const,
@@ -44,7 +46,6 @@ REGELS:
       messages: [{ role: "user", content: prompt }],
     });
 
-    // Extraheer de tekst uit het laatste text-blok
     const tekst = response.content
       .filter((b) => b.type === "text")
       .map((b) => (b as { type: "text"; text: string }).text)
