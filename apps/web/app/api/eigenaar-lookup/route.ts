@@ -3,43 +3,55 @@ import { NextRequest, NextResponse } from "next/server";
 const BAG_WFS =
   "https://service.pdok.nl/lv/bag/wfs/v2_0?SERVICE=WFS&VERSION=2.0.0&REQUEST=GetFeature&OUTPUTFORMAT=application/json&count=10";
 
+const LABEL_MAP: Record<string, string> = {
+  woonfunctie:        "wonen",
+  kantoorfunctie:     "kantoor",
+  winkelfunctie:      "winkel",
+  industriefunctie:   "industrie",
+  logiesfunctie:      "logies",
+  gezondheidsfunctie: "gezondheidszorg",
+  onderwijsfunctie:   "onderwijs",
+  bijeenkomstfunctie: "bijeenkomst",
+  sportfunctie:       "sport",
+  celfunctie:         "detentie",
+  overige:            "overige",
+};
+
 function inferZin(doelen: string[], oppTotaal: number | null): string | null {
-  const uniq = [...new Set(doelen.map((d) => d.toLowerCase()))];
+  const uniq = [...new Set(doelen.map((d) => d.toLowerCase().trim()))];
+  const labels = uniq.map((d) => {
+    for (const [key, val] of Object.entries(LABEL_MAP)) {
+      if (d.includes(key)) return val;
+    }
+    return d;
+  }).filter((v, i, a) => a.indexOf(v) === i); // dedup labels
 
   const isWoon = uniq.some((d) => d.includes("woon"));
-  const isBedrijf = uniq.some(
-    (d) =>
-      d.includes("industrie") ||
-      d.includes("kantoor") ||
-      d.includes("winkel") ||
-      d.includes("opslag") ||
-      d.includes("logies") ||
-      d.includes("gezondheid")
+  const isBedrijf = uniq.some((d) =>
+    d.includes("kantoor") || d.includes("winkel") ||
+    d.includes("industrie") || d.includes("logies") || d.includes("gezondheid")
   );
-  const isMaatschappelijk = uniq.some(
-    (d) =>
-      d.includes("onderwijs") ||
-      d.includes("bijeenkomst") ||
-      d.includes("sport") ||
-      d.includes("maatschappelijk")
+  const isMaatschappelijk = uniq.some((d) =>
+    d.includes("onderwijs") || d.includes("bijeenkomst") ||
+    d.includes("sport") || d.includes("cel")
   );
+  const isGemengd = labels.length > 1;
 
+  if (isGemengd && isWoon && isBedrijf) {
+    return `Gemengd gebruik (${labels.join(" + ")}) — vermoedelijk zakelijk of institutioneel eigendom.`;
+  }
   if (isBedrijf) {
-    const label = uniq.join(", ");
-    return `Bedrijfsmatig gebruik (${label}) — waarschijnlijk zakelijk of institutioneel eigendom.`;
+    return `Bedrijfsmatig gebruik (${labels.join(", ")}) — vermoedelijk zakelijk of institutioneel eigendom.`;
   }
-
   if (isMaatschappelijk) {
-    return `Maatschappelijk gebruik — waarschijnlijk gemeente, stichting of overheidsinstantie.`;
+    return `Maatschappelijk gebruik (${labels.join(", ")}) — vermoedelijk gemeente, stichting of overheidsinstantie.`;
   }
-
   if (isWoon) {
     if (oppTotaal && oppTotaal > 800) {
-      return `Woonbestemming, ${oppTotaal.toLocaleString("nl-NL")} m² totaal — vermoedelijk woningcorporatie of meerdere units.`;
+      return `Woongebouw, ${oppTotaal.toLocaleString("nl-NL")} m² totaal — vermoedelijk woningcorporatie of meerdere eenheden.`;
     }
     return `Woonbestemming — vermoedelijk particulier eigendom.`;
   }
-
   return null;
 }
 

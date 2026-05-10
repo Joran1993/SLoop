@@ -4,23 +4,10 @@ import {
   X, Building2, Calendar, Ruler, Radio, User, ExternalLink,
   Phone, Globe, Search, Link2, Check, AlertTriangle, Clock, MapPin, Eye,
 } from "lucide-react";
-import { useQuery, queryOptions } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { leadQueryOptions, pipelineSignalsQueryOptions } from "@/lib/queries";
 import { signalTypeLabel, eigenaarTypeLabel } from "@/lib/signal-labels";
-
-const eigenaarLookupOptions = (bagPandId: string | null) =>
-  queryOptions({
-    queryKey: ["eigenaar-lookup", bagPandId],
-    queryFn: async () => {
-      if (!bagPandId) return null;
-      const res = await fetch(`/api/eigenaar-lookup?bag_pand_id=${encodeURIComponent(bagPandId)}`);
-      const json = await res.json();
-      return (json?.zin as string | null) ?? null;
-    },
-    enabled: !!bagPandId,
-    staleTime: 24 * 60 * 60 * 1000,
-  });
 
 interface LeadDetailPanelProps {
   leadId: string;
@@ -145,9 +132,22 @@ export function LeadDetailPanel({ leadId, onClose }: LeadDetailPanelProps) {
     lead?.eigenaar_naam ??
     lead?.contact_naam ?? null;
 
-  const { data: eigenaarZin, isLoading: lookupLoading } = useQuery(
-    eigenaarLookupOptions(!eigenaarNaam ? (lead?.bag_pand_id ?? null) : null)
-  );
+  const [eigenaarZin, setEigenaarZin] = useState<string | null>(null);
+  const [lookupLoading, setLookupLoading] = useState(false);
+
+  async function fetchEigendomsinfo() {
+    if (!lead?.bag_pand_id || lookupLoading) return;
+    setLookupLoading(true);
+    try {
+      const res = await fetch(`/api/eigenaar-lookup?bag_pand_id=${encodeURIComponent(lead.bag_pand_id)}`);
+      const json = await res.json();
+      setEigenaarZin(json?.zin ?? "Geen eigendomsinformatie gevonden.");
+    } catch {
+      setEigenaarZin("Ophalen mislukt. Probeer het opnieuw.");
+    } finally {
+      setLookupLoading(false);
+    }
+  }
 
   const hasContactInfo = !!(lead?.contact_telefoon || lead?.contact_website || lead?.contact_email);
   const gr = grootte(lead?.oppervlakte_m2);
@@ -216,16 +216,33 @@ export function LeadDetailPanel({ leadId, onClose }: LeadDetailPanelProps) {
                 ) : (
                   <div className="space-y-1.5">
                     <span className="text-sm text-muted-foreground">Eigenaar onbekend</span>
-                    {lookupLoading && (
-                      <span className="block text-[11px] text-muted-foreground/60 animate-pulse">
-                        Eigendomsinformatie opzoeken…
-                      </span>
+
+                    {/* Eigendomsinformatie ophalen */}
+                    {!eigenaarZin && lead?.bag_pand_id && (
+                      <button
+                        onClick={fetchEigendomsinfo}
+                        disabled={lookupLoading}
+                        className="inline-flex items-center gap-1.5 rounded-full border border-border px-2.5 py-1 text-[11px] font-medium text-muted-foreground hover:border-foreground hover:text-foreground disabled:opacity-50 transition-colors"
+                      >
+                        {lookupLoading ? (
+                          <>
+                            <span className="h-2.5 w-2.5 animate-spin rounded-full border border-current border-t-transparent" />
+                            Ophalen…
+                          </>
+                        ) : (
+                          <>
+                            <Building2 className="h-2.5 w-2.5" />
+                            Eigendomsinformatie ophalen
+                          </>
+                        )}
+                      </button>
                     )}
-                    {!lookupLoading && eigenaarZin && (
+                    {eigenaarZin && (
                       <span className="block text-[11px] text-muted-foreground leading-snug">
                         {eigenaarZin}
                       </span>
                     )}
+
                     {/* Dieper onderzoek */}
                     {!onderzoekTekst && (
                       <button
